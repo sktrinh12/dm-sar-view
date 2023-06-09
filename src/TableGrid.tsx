@@ -85,7 +85,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                               ? truncatedValue
                               : '-'
                           if (columnKey === 'MOLFILE') {
-                            const link = `http://dotmatics-2022-dev.fount/browser/query/browse.jsp?currentPrimary=${cmpdId}`
+                            const link = `https://dotmatics.kinnate.com/browser/query/browse.jsp?currentPrimary=${cmpdId}`
                             return (
                               <td
                                 key={`${cmpdId}-${columnKey}`}
