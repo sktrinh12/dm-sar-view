@@ -9,6 +9,7 @@ import Box from '@mui/material/Box'
 import GoHomeIcon from './GoHomeIcon'
 import Pagination from './Pagination'
 import { BACKEND_URL } from './BackendURL'
+import { compoundIdSort } from './sort'
 // import { data } from './mockData.js'
 
 const height = 667
@@ -81,14 +82,7 @@ const MainView: React.FC = () => {
     const dateFilter = urlParamsObj.date_filter
     const compoundIdParam = urlParamsObj.compound_id
     const compoundIdsArray = compoundIdParam.split('-')
-    compoundIdsArray.sort((a, b) => {
-      const matchA = a.match(/FT(\d+)/)
-      const matchB = b.match(/FT(\d+)/)
-
-      const numA = matchA ? Number(matchA[1]) : 0
-      const numB = matchB ? Number(matchB[1]) : 0
-      return numB - numA
-    })
+    compoundIdSort(compoundIdsArray)
     console.log(compoundIdsArray)
     const start = (page - 1) * compoundsPerPage
     const end = start + compoundsPerPage
