@@ -7,6 +7,7 @@ import { Grid, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import 'react-datepicker/dist/react-datepicker.css'
 import { BACKEND_URL } from './BackendURL'
+import { compoundIdSort } from './sort'
 
 const Home: React.FC = () => {
   const [compoundIds, setCompoundIds] = useState<string[]>([])
@@ -25,9 +26,10 @@ const Home: React.FC = () => {
       if (urlParamsObj.hasOwnProperty('dm_table')) {
         try {
           const url = `${BACKEND_URL}/v1/get_cmpid_from_tbl?${urlParams.toString()}`
-          console.log(url)
+          // console.log(url)
           const response = await fetch(url)
           const data = await response.json()
+          compoundIdSort(data)
           setCompoundIds(data)
         } catch (error) {
           console.error('Error fetching compound ids:', error)
