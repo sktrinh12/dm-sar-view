@@ -1,68 +1,11 @@
-import React, { useState, useEffect, ChangeEvent, ClipboardEvent } from 'react'
-import { styled } from '@mui/system'
-import TextareaAutosize from '@mui/base/TextareaAutosize'
+import React, { useState, useEffect, ChangeEvent } from 'react'
+import TextField from '@mui/material/TextField'
 import DatePicker from 'react-datepicker'
 import Button from '@mui/material/Button'
 import { Grid, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import 'react-datepicker/dist/react-datepicker.css'
 import { BACKEND_URL } from './BackendURL'
-
-const blue = {
-  100: '#DAECFF',
-  200: '#b6daff',
-  400: '#3399FF',
-  500: '#007FFF',
-  600: '#0072E5',
-  900: '#003A75',
-}
-
-const grey = {
-  50: '#f6f8fa',
-  100: '#eaeef2',
-  200: '#d0d7de',
-  300: '#afb8c1',
-  400: '#8c959f',
-  500: '#6e7781',
-  600: '#57606a',
-  700: '#424a53',
-  800: '#32383f',
-  900: '#24292f',
-}
-
-const StyledTextarea = styled(TextareaAutosize)(
-  ({ theme }) => `
-    width: 320px;
-    font-family: IBM Plex Sans, sans-serif;
-    font-size: 0.875rem;
-    font-weight: 400;
-    line-height: 1.5;
-    padding: 12px;
-    border-radius: 12px 12px 0 12px;
-    color: ${theme.palette.mode === 'dark' ? grey[300] : grey[900]};
-    background: ${theme.palette.mode === 'dark' ? grey[900] : '#fff'};
-    border: 1px solid ${theme.palette.mode === 'dark' ? grey[700] : grey[200]};
-    box-shadow: 0px 2px 24px ${
-      theme.palette.mode === 'dark' ? blue[900] : blue[100]
-    };
-
-    &:hover {
-      border-color: ${blue[400]};
-    }
-
-    &:focus {
-      border-color: ${blue[400]};
-      box-shadow: 0 0 0 3px ${
-        theme.palette.mode === 'dark' ? blue[600] : blue[200]
-      };
-    }
-
-    // firefox
-    &:focus-visible {
-      outline: 0;
-    }
-  `
-)
 
 const Home: React.FC = () => {
   const [compoundIds, setCompoundIds] = useState<string[]>([])
@@ -110,15 +53,6 @@ const Home: React.FC = () => {
     setCompoundIds(items)
   }
 
-  const handleOnPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const pastedText = event.clipboardData.getData('text/plain')
-    const parsedValues = pastedText
-      .split(/[\r\n\t]+/)
-      .map((value) => value.trim())
-      .filter((value) => value !== '')
-    setCompoundIds(parsedValues)
-  }
-
   const handleButtonClick = () => {
     const queryParams = new URLSearchParams()
     queryParams.append(
@@ -144,21 +78,32 @@ const Home: React.FC = () => {
 
   return (
     <Grid
-      sx={{ flexGrow: 1, paddingTop: '25vh' }}
+      sx={{ flexGrow: 1, paddingTop: '15vh' }}
       justifyContent='center'
       container
       spacing={2}
     >
-      <Grid item xs={3}>
+      <Grid item xs={12}>
+        <Typography
+          variant='h1'
+          align='center'
+          paddingBottom={5}
+          style={{ color: '#343990ff' }}
+        >
+          SAR View
+        </Typography>
+      </Grid>
+      <Grid item xs={2}>
         <Typography variant='h6' gutterBottom>
           Compound IDs
         </Typography>
-        <StyledTextarea
-          aria-label='Compound IDs text area'
+        <TextField
+          label='Compound IDs'
           placeholder='Paste compound Ids (separated by tabs or carriage returns)'
           onChange={handleOnChange}
-          onPaste={handleOnPaste}
           value={compoundIds.join('\n')}
+          multiline
+          maxRows={12}
         />
       </Grid>
 
@@ -166,6 +111,7 @@ const Home: React.FC = () => {
         <Typography variant='h6' gutterBottom>
           Date
         </Typography>
+
         <DatePicker
           selected={dateStart}
           showPreviousMonths
