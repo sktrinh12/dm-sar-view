@@ -2,6 +2,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react'
 import TextField from '@mui/material/TextField'
 import DatePicker from 'react-datepicker'
 import Button from '@mui/material/Button'
+import AppVersion from './AppVersionTag'
 import { Grid, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -127,6 +128,7 @@ const Home: React.FC = () => {
           Submit
         </Button>
       </Grid>
+      <AppVersion />
     </Grid>
   )
 }
