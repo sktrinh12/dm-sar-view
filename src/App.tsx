@@ -25,7 +25,9 @@ const Home: React.FC = () => {
 
       if (urlParamsObj.hasOwnProperty('dm_table')) {
         try {
-          const url = `${BACKEND_URL}/v1/get_cmpid_from_tbl?${urlParams.toString()}`
+          const url = `${BACKEND_URL}/v1/get_cmpid_from_tbl?${urlParams
+            .toString()
+            .replace('DS3_USERDATA.', '')}`
           // console.log(url)
           const response = await fetch(url)
           const data = await response.json()
