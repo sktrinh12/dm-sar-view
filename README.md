@@ -1,70 +1,37 @@
-# Getting Started with Create React App
+## SAR-VEW
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+#### Summary
 
-## Available Scripts
+This external app displays compound ids and their properties with highlighted rows based on a date range.
 
-In the project directory, you can run:
+#### Technical
 
-### `npm start`
+Specifically, it ingests query parameters, `-TABLENAME-` passed from DM UI to
+pre-populated a textarea with compound ids that are to be viewed for structure activity relationship analysis. The `-TABLENAME-` mask will direct the backend to select the `COMPOUND_ID` column from the corresponding query table.
+This is only the frontend UI. The geomean fastapi python backend `https://github.com/Kinnate/geomean-ic50-flagger.git` is used to generate the SQL and run it against the connected Oracle database. The application was deployed using
+Jenkins CI/CD pipline. The `Jenkinsfile` can be inspected to understand what is performed. Basically, the docker image is built, then pushed to ECR, then deployed using `helm`. The app lives in the main `apps` namespace within `helm`
+as well as `kubectl`. Run `kubectl get all -n apps -l app=sar-view` to get the kubernetes resources. Currently, the app can be visited by navigating to: `http://sar-view.kinnate`.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+#### Additional notes
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Once jenkins deploys the app and the pods and services are running the next step
+is to expose the application through a kubernetes nginx ingress. Just as in any other app, one must add a new ingress rule to the
+ingress yaml file. This can be obtained by running: `kubectl get ingress -o yaml` and applyling it locally, or editing the yaml on the fly (expert user)
+like so: `kubectl edit ingress -n apps`. The ingress rule block should resemble
+something like:
 
-### `npm test`
+```
+    - host: $APP_NAME.kinnate
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: $APP_NAME-svc
+                port:
+                  name: http
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Then ensure this A-record is added to Route 53 with the appropriate LoadBalancer
+name as the `Route traffic to` value.
