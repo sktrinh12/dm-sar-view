@@ -7,7 +7,7 @@ This external app displays compound ids and their properties with highlighted ro
 #### Technical
 
 Specifically, it ingests query parameters, `-TABLENAME-` passed from DM UI to
-pre-populated a textarea with compound ids that are to be viewed for structure activity relationship analysis. The `-TABLENAME-` mask will direct the backend to select the `COMPOUND_ID` column from the corresponding query table.
+pre-populate a textarea with compound ids that are to be viewed for structure activity relationship analysis. The `-TABLENAME-` mask will direct the backend to select the `COMPOUND_ID` column from the corresponding query table.
 This is only the frontend UI. The geomean fastapi python backend `https://github.com/Kinnate/geomean-ic50-flagger.git` is used to generate the SQL and run it against the connected Oracle database. The application was deployed using
 Jenkins CI/CD pipline. The `Jenkinsfile` can be inspected to understand what is performed. Basically, the docker image is built, then pushed to ECR, then deployed using `helm`. The app lives in the main `apps` namespace within `helm`
 as well as `kubectl`. Run `kubectl get all -n apps -l app=sar-view` to get the kubernetes resources. Currently, the app can be visited by navigating to: `http://sar-view.kinnate`.
