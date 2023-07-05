@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+cx_Oracle
+fastapi-utils
+rdkit
+redis
