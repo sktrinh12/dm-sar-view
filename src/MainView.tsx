@@ -39,11 +39,13 @@ const MainView: React.FC = () => {
   const handlePreviousPage = () => {
     setPage(page - 1)
   }
+  const [requestIds, setRequestIds] = useState<string[]>([])
   const [compoundIds, setCompoundIds] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [initialFetch, setInitialFetch] = useState<boolean>(true)
   const compoundsPerPage = 10
 
-  const fetchData = async (url: string) => {
+  const fetchData = async (url: string, updateRequestIds: boolean) => {
     setLoading(true)
     await axios
       .get(url, axiosConfig)
@@ -56,48 +58,58 @@ const MainView: React.FC = () => {
           console.log(json)
         }
         if (res.status === 200) {
-          setTableData(json)
+          if (updateRequestIds) {
+            setRequestIds(json.request_ids)
+          }
+          setTableData(json.data)
           setLoading(false)
         }
       })
       .catch((err: AxiosError<any>) => {
         console.log('AXIOS ERROR: ', err)
       })
-    // setLoading(false)
-    // setTableData(data)
   }
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const urlParamsObj = Object.fromEntries(urlParams)
-    let hyphenCurrentCompoundId: string
-    console.log(urlParams.toString())
+    const fetchInitialData = async () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlParamsObj = Object.fromEntries(urlParams)
+      console.log(urlParams.toString())
 
-    if (
-      !urlParamsObj.hasOwnProperty('date_filter') ||
-      !urlParamsObj.hasOwnProperty('compound_id')
-    ) {
-      console.error('Error: Date or compound ID is missing!')
+      if (
+        !urlParamsObj.hasOwnProperty('date_filter') ||
+        !urlParamsObj.hasOwnProperty('compound_id')
+      ) {
+        console.error('Error: Date or compound ID is missing!')
+      }
+      const dateFilter = urlParamsObj.date_filter
+      const compoundIdParam = urlParamsObj.compound_id
+      const compoundIdsArray = compoundIdParam.split('-')
+      compoundIdSort(compoundIdsArray)
+      console.log(compoundIdsArray)
+      setCompoundIds(compoundIdsArray)
+      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&compound_ids=${compoundIdParam}`
+      console.log(initialUrl)
+      await fetchData(initialUrl, true)
     }
-    const dateFilter = urlParamsObj.date_filter
-    const compoundIdParam = urlParamsObj.compound_id
-    const compoundIdsArray = compoundIdParam.split('-')
-    compoundIdSort(compoundIdsArray)
-    console.log(compoundIdsArray)
-    const start = (page - 1) * compoundsPerPage
-    const end = start + compoundsPerPage
-    setCompoundIds(compoundIdsArray)
-    if (compoundIdsArray.length > compoundsPerPage) {
-      const subsetCompoundIds = compoundIdsArray.slice(start, end)
-      hyphenCurrentCompoundId = subsetCompoundIds.join('-')
+
+    const fetchPaginatedData = async () => {
+      const paginatedUrl = `${BACKEND_URL}/v1/sar_view_sql_hget?request_id=${
+        requestIds[page - 1]
+      }`
+      console.log(paginatedUrl)
+      await fetchData(paginatedUrl, false)
+    }
+
+    if (initialFetch) {
+      fetchInitialData()
+      setInitialFetch(false)
     } else {
-      hyphenCurrentCompoundId = compoundIdParam
+      console.log(requestIds)
+      fetchPaginatedData()
     }
-
-    const url = `${BACKEND_URL}/v1/sar_view_sql?sql_type=blank&type=blank&date_filter=${dateFilter}&compound_id=${hyphenCurrentCompoundId}`
-    console.log(url)
-    fetchData(url)
     return () => {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
   return (
