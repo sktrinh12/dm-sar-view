@@ -38,7 +38,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
               <Table sx={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {tdata.length > 0 &&
+                    {tdata.length > 0 ? (
                       Object.keys(tdata[0])
                         .filter((columnKey) => columnKey !== 'DATE_HIGHLIGHT')
                         .map((columnKey) => (
@@ -55,7 +55,20 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                               .toLowerCase()
                               .replace(/\b\w/g, (match) => match.toUpperCase())}
                           </th>
-                        ))}
+                        ))
+                    ) : (
+                      <th
+                        style={{
+                          borderBottomWidth: '2px',
+                          borderBottomStyle: 'solid',
+                          padding: '8px',
+                          minWidth: '200px',
+                          opacity: 0.25,
+                        }}
+                      >
+                        No data available
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
