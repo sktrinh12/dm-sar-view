@@ -10,7 +10,6 @@ import GoHomeIcon from './GoHomeIcon'
 import Pagination from './Pagination'
 import { BACKEND_URL } from './BackendURL'
 import { compoundIdSort } from './sort'
-// import { data } from './mockData.js'
 
 const height = 667
 const width = 375
@@ -43,6 +42,7 @@ const MainView: React.FC = () => {
   const [compoundIds, setCompoundIds] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [initialFetch, setInitialFetch] = useState<boolean>(true)
+  const [disablePagination, setDisablePagination] = useState<boolean>(true)
   const compoundsPerPage = 10
 
   const fetchData = async (url: string, updateRequestIds: boolean) => {
@@ -105,10 +105,15 @@ const MainView: React.FC = () => {
       fetchInitialData()
       setInitialFetch(false)
     } else {
-      console.log(requestIds)
+      // console.log(requestIds)
       fetchPaginatedData()
     }
-    return () => {}
+    const timer = setTimeout(() => {
+      setDisablePagination(false)
+    }, 5300)
+    return () => {
+      clearTimeout(timer)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
@@ -149,6 +154,7 @@ const MainView: React.FC = () => {
               disableNext={page * compoundsPerPage >= compoundIds.length}
               totalCount={compoundIds.length}
               compoundsPerPage={compoundsPerPage}
+              disablePagination={disablePagination}
             />
           </Box>
           <TableGrid tableData={tableData} />
@@ -168,6 +174,7 @@ const MainView: React.FC = () => {
               disableNext={page * compoundsPerPage >= compoundIds.length}
               totalCount={compoundIds.length}
               compoundsPerPage={compoundsPerPage}
+              disablePagination={disablePagination}
             />
           </Box>
         </>
