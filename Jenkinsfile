@@ -80,6 +80,7 @@ pipeline {
         
         stage('docker build frontend') {
             when { expression { params.BUILD_FRONTEND.toString().toLowerCase() == 'true' }
+            }
             steps{
                 sh( label: 'Docker Build $APP_NAME app', script:
                 '''
