@@ -12,13 +12,14 @@ const Pagination = ({
   disableNext,
   totalCount,
   compoundsPerPage,
+  disablePagination,
 }) => {
   return (
     <>
       <IconButton
         aria-label='Previous'
         onClick={handlePreviousPage}
-        disabled={page === 1}
+        disabled={disablePagination || page === 1}
       >
         <ArrowCircleLeftIcon />
       </IconButton>
@@ -31,7 +32,7 @@ const Pagination = ({
       <IconButton
         aria-label='Next'
         onClick={handleNextPage}
-        disabled={disableNext}
+        disabled={disablePagination || disableNext}
       >
         <ArrowCircleRightIcon />
       </IconButton>
