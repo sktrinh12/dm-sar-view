@@ -1,4 +1,4 @@
-apps = ['sar-view']
+apps = ['frontend', 'backend']
 pipeline {
     agent { 
         kubernetes{
@@ -7,12 +7,20 @@ pipeline {
         
     }
     parameters {
+				booleanParam(defaultValue: false, description: 'build the frontend', name: 'BUILD_FRONTEND')
+				booleanParam(defaultValue: false, description: 'build the backend', name: 'BUILD_BACKEND')
         string(defaultValue: '0.1', description: 'Version number', name: 'VERSION_NUMBER')
 		}
     environment{
         AWSID = credentials('AWSID')
         DOCKER_PSW = credentials('DOCKER_PASSWORD')
         DOCKER_CONFIG = "${WORKSPACE}/docker.config"
+        ORACLE_HOST = 'dotoradb.fount'
+        ORACLE_PORT = 1521
+        ORACLE_SID = credentials('ORACLE_SID')
+        ORACLE_USER = credentials('ORACLE_USER')
+        ORACLE_PASS = credentials('ORACLE_PASS')
+        REDIS_PASSWD = credentials('REDIS_PASSWD')
         NAMESPACE = 'apps'
         APP_NAME = 'sar-view'
         AWS_PAGER = ''
@@ -34,17 +42,52 @@ pipeline {
             }
         }
         
+        stage('docker build backend') {
+            when { expression { params.BUILD_BACKEND.toString().toLowerCase() == 'true' }
+            }
+            steps{
+               sh( label: 'Docker Build Backend', script:
+               '''
+                #!/bin/bash
+                set -x
+                docker build \
+                --no-cache --network=host --build-arg ORACLE_HOST=${ORACLE_HOST} --build-arg ENV=${ENV} \
+                --build-arg ORACLE_PORT=${ORACLE_PORT} --build-arg ORACLE_SID=${ORACLE_SID} --build-arg ORACLE_USER=${ORACLE_USER} \
+                --build-arg ORACLE_PASS=${ORACLE_PASS} --build-arg DB_TYPE=PROD --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
+                --build-arg REDIS_HOST=redis.kinnate -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest \
+                -f backend/Dockerfile.prod .
+                ''', returnStdout: true
+                )
+                
+            }
+        }
         
-        stage('docker build sar-view app') {
+    
+        stage('docker push backend to ecr') {
+            when { expression { params.BUILD_BACKEND.toString().toLowerCase() == 'true' }
+            }
+            steps {
+                sh(label: 'ECR docker push backend', script:
+                '''
+								#!/bin/bash
+								set -x
+                docker push $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest
+                ''', returnStdout: true
+                )
+            }
+        }
+
+        
+        stage('docker build frontend') {
+            when { expression { params.BUILD_FRONTEND.toString().toLowerCase() == 'true' }
             steps{
                 sh( label: 'Docker Build $APP_NAME app', script:
                 '''
                 #!/bin/bash
                 set -x
-								ls -ltra
                 docker build \
                 --no-cache --network=host \
-                --build-arg REACT_APP_BACKEND_URL=http://geomean.backend.kinnate \
+                --build-arg REACT_APP_BACKEND_URL=http://${APP_NAME}-backend.kinnate \
                 --build-arg REACT_APP_VERSION=${VERSION_NUMBER} \
                 --build-arg REACT_APP_ENVIRONMENT=PROD \
                 --memory="2g" --memory-swap="4g" \
@@ -55,11 +98,11 @@ pipeline {
             }
         }
         
-        stage('docker push to ecr') {
+        stage('docker push frontend to ecr') {
             steps {
                 sh(label: 'ECR docker push $APP_NAME', script:
                 '''
-                docker push $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}
+                docker push $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend:latest
                 ''', returnStdout: true
                 )
             }
@@ -123,13 +166,13 @@ pipeline {
 def loop_ecr_purge(list) {
     for (int i = 0; i < list.size(); i++) {
         sh """aws ecr list-images \
-        --repository-name ${list[i]} \
+        --repository-name sar-view-${list[i]} \
         --filter 'tagStatus=UNTAGGED' \
         --query 'imageIds[].imageDigest' \
         --output json \
         | jq -r '.[]' \
         | xargs -I{} aws ecr batch-delete-image \
-        --repository-name ${list[i]} \
+        --repository-name sar-view-${list[i]} \
         --image-ids imageDigest={} 
         """
     }
