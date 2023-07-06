@@ -100,6 +100,8 @@ pipeline {
         }
         
         stage('docker push frontend to ecr') {
+            when { expression { params.BUILD_FRONTEND.toString().toLowerCase() == 'true' }
+            }
             steps {
                 sh(label: 'ECR docker push $APP_NAME', script:
                 '''
