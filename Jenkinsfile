@@ -137,19 +137,46 @@ pipeline {
                 chmod +x ./kubectl
                 if ./kubectl get pod -n $NAMESPACE -l app=$APP_NAME | grep -q $APP_NAME; then
                   echo "$APP_NAME pods already exists"
-                  ./kubectl rollout restart deploy/${APP_NAME}-deploy -n $NAMESPACE
+                  if [[ "$BUILD_BACKEND" == true ]]; then
+                     ./kubectl rollout restart deploy/${APP_NAME}-backend-deploy -n $NAMESPACE
+                  else
+                     echo "Skipping backend rollout"
+                  fi
+                  sleep 5
+                  if [[ "$BUILD_FRONTEND" == true ]]; then
+                     ./kubectl rollout restart deploy/${APP_NAME}-frontend-deploy -n $NAMESPACE
+                  else
+                     echo "Skipping frontend rollout"
+                  fi
                 else
                   echo "pods $APP_NAME do not exist; deploy using helm"
                   git clone https://github.com/sktrinh12/helm-basic-app-chart.git
                   cd helm-basic-app-chart
+                  if [[ "$BUILD_BACKEND" == true ]]; then
+                      helm install k8sapp-${APP_NAME}-backend . --set service.namespace=${NAMESPACE} \
+                      --set service.port=80 --set nameOverride=${APP_NAME}-backend \
+                      --set fullnameOverride=${APP_NAME}-backend --set namespace=${NAMESPACE} \
+                      --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend \
+                      --set image.tag=latest --set containers.name=fastapi \
+                      --set containers.ports.containerPort=80 --set app=$APP_NAME \
+                      --set terminationGracePeriodSeconds=10 --set service.type=ClusterIP \
+                      --namespace $NAMESPACE
+                  else
+                     echo "Skipping backend helm build"
+                  fi
+                  sleep 2
+                  if [[ "$BUILD_FRONTEND" == true ]]; then
                   helm install k8sapp-${APP_NAME} . --set service.namespace=$NAMESPACE \
                   --set service.port=80 --set service.targetPort=80 --set nameOverride=${APP_NAME} \
                   --set fullnameOverride=${APP_NAME} --set namespace=${NAMESPACE} \
-                  --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME} \
+                  --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend \
                   --set image.tag=latest --set containers.name=react \
                   --set containers.ports.containerPort=80 --set app=${APP_NAME} \
                   --set terminationGracePeriodSeconds=10 --set service.type=ClusterIP \
                   --set ingress.enabled=false --namespace $NAMESPACE
+                  else
+                     echo "Skipping frontend helm build"
+                  fi
                 fi
                 '''
                 }
