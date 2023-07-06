@@ -92,7 +92,7 @@ pipeline {
                 --build-arg REACT_APP_VERSION=${VERSION_NUMBER} \
                 --build-arg REACT_APP_ENVIRONMENT=PROD \
                 --memory="2g" --memory-swap="4g" \
-                -t $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME} \
+                -t $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend \
                 -f Dockerfile.prod .
                 ''', returnStdout: true
                 )
