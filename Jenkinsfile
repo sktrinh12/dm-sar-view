@@ -167,8 +167,8 @@ pipeline {
                   sleep 2
                   if [[ "$BUILD_FRONTEND" == true ]]; then
                   helm install k8sapp-${APP_NAME} . --set service.namespace=$NAMESPACE \
-                  --set service.port=80 --set service.targetPort=80 --set nameOverride=${APP_NAME} \
-                  --set fullnameOverride=${APP_NAME} --set namespace=${NAMESPACE} \
+                  --set service.port=80 --set service.targetPort=80 --set nameOverride=${APP_NAME}-frontend \
+                  --set fullnameOverride=${APP_NAME}-frontend --set namespace=${NAMESPACE} \
                   --set image.repository=${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend \
                   --set image.tag=latest --set containers.name=react \
                   --set containers.ports.containerPort=80 --set app=${APP_NAME} \
