@@ -6,8 +6,21 @@ import { TableDataType } from './types'
 import { styled } from '@mui/system'
 
 const TableRow = styled('tr')({
-  fontSize: '12px',
+  fontSize: '13.5px',
 })
+
+const minWidthByKeys = {
+  biochemical_geomean: '600px',
+  cellular_geomean: '380px',
+  in_vivo_pk: '350px',
+  compound_batch: '120px',
+  metabolic_stability: '340px',
+  pxr: '250px',
+  permeability: '425px',
+  protein_binding: '200px',
+  solubility: '100px',
+  stability: '340px',
+}
 
 export default function TableGrid({ tableData }: { tableData: TableDataType }) {
   return Object.keys(tableData).map((cmpdId, index) => (
@@ -15,8 +28,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
       key={`div-row-${cmpdId}-${index}`}
       style={{
         display: 'flex',
-        flexWrap: 'nowrap',
-        borderTop: '1px solid black',
+        borderTop: '2.75px solid black',
         paddingTop: '2px',
         marginTop: '2px',
       }}
@@ -26,7 +38,11 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
         return (
           <div
             key={`div-${cmpdId}-${key}-${index}`}
-            style={{ flex: '0 0 auto', margin: '6px' }}
+            style={{
+              flex: '0 0 auto',
+              margin: '6px',
+              minWidth: minWidthByKeys[key] || '95px',
+            }}
           >
             <h3>
               {key
@@ -45,7 +61,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                           <th
                             key={columnKey}
                             style={{
-                              borderBottomWidth: '2px',
+                              borderBottomWidth: '1px',
                               borderBottomStyle: 'solid',
                               padding: '8px',
                             }}
@@ -59,10 +75,10 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                     ) : (
                       <th
                         style={{
-                          borderBottomWidth: '2px',
+                          borderBottomWidth: '1px',
                           borderBottomStyle: 'solid',
                           padding: '8px',
-                          minWidth: '200px',
+                          minWidth: minWidthByKeys[key] || '200px',
                           opacity: 0.25,
                         }}
                       >
