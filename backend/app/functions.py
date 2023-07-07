@@ -69,7 +69,7 @@ def execute_query_background_redis(
             for k in ["compound_id"] + list(sql_columns.keys())
             if k in main_payload[cmpd_id]
         }
-        for cmpd_id in compound_ids
+        for cmpd_id in main_payload
     }
 
     redis_conn.set(request_id, dumps(sorted_payload))
