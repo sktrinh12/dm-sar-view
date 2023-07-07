@@ -11,13 +11,13 @@ const TableRow = styled('tr')({
 
 const minWidthByKeys = {
   biochemical_geomean: '600px',
-  cellular_geomean: '380px',
+  cellular_geomean: '580px',
   in_vivo_pk: '350px',
   compound_batch: '120px',
   metabolic_stability: '340px',
   pxr: '250px',
   permeability: '425px',
-  protein_binding: '200px',
+  protein_binding: '300px',
   solubility: '100px',
   stability: '340px',
 }
@@ -40,7 +40,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
             key={`div-${cmpdId}-${key}-${index}`}
             style={{
               flex: '0 0 auto',
-              margin: '6px',
+              margin: '4px',
               minWidth: minWidthByKeys[key] || '95px',
             }}
           >
@@ -63,7 +63,8 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                             style={{
                               borderBottomWidth: '1px',
                               borderBottomStyle: 'solid',
-                              padding: '8px',
+                              textAlign: 'left',
+                              padding: '4px',
                             }}
                           >
                             {columnKey
@@ -77,7 +78,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                         style={{
                           borderBottomWidth: '1px',
                           borderBottomStyle: 'solid',
-                          padding: '8px',
+                          padding: '4px',
                           minWidth: minWidthByKeys[key] || '200px',
                           opacity: 0.25,
                         }}
@@ -121,8 +122,8 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                                 style={{
                                   borderBottomWidth: '1px',
                                   borderBottomStyle: 'solid',
-                                  padding: '8px',
-                                  margin: 0,
+                                  padding: '4px',
+                                  margin: '2px',
                                 }}
                               >
                                 <a
@@ -150,7 +151,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                               style={{
                                 borderBottomWidth: '1px',
                                 borderBottomStyle: 'solid',
-                                padding: '8px',
+                                padding: '4px',
                                 margin: 0,
                               }}
                             >
