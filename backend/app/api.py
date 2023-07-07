@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Query, Response
+from fastapi import FastAPI, Query, Response, Body
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from fastapi import BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import threading
+import queue
 from math import ceil
 import uuid
 from datetime import datetime, timedelta
@@ -13,6 +14,7 @@ from json import loads, dumps
 from .functions import execute_query_background_redis
 from .redis_connection import redis_conn
 from .sql import dm_table_cols
+from os import getenv
 
 
 app = FastAPI()
@@ -33,12 +35,13 @@ app.add_middleware(
 )
 
 query_results_lock = threading.Lock()
+q = queue.Queue()
 
 
 def startup_event():
     global pool
     pool = OraclePoolCxn(
-        cred_dct["HOST"],
+        cred_dct["HOST"] if getenv("ENV", "DEV") == "PROD" else cred_dct["HOST-DEV"],
         cred_dct["PORT"],
         cred_dct["SID"],
         cred_dct["USERNAME"],
@@ -103,25 +106,33 @@ async def hget_redis(request_id: str):
     )
 
 
-@app.get("/v1/sar_view_sql_hset")
+@app.post("/v1/sar_view_sql_hset")
 async def hset_redis(
     background_tasks: BackgroundTasks,
-    compound_ids: str = Query(default="FT002787-FT007791"),
+    request_data: dict = Body(...),
     date_filter: str = Query(
         f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}_{datetime.now().strftime("%m-%d-%Y")}'
     ),
 ):
+    compound_ids = request_data.get("compound_ids")
+    print(compound_ids)
     if compound_ids is None or compound_ids == "":
         raise HTTPException(status_code=400, detail="Invalid compound IDs")
     start_date, end_date = date_filter.split("_")
     print(f"{start_date} - {end_date}")
-    compound_ids_list = compound_ids.split("-")
-    nbr_cmpds = len(compound_ids_list)
+    # compound_ids_list = compound_ids.split("-")
+    nbr_cmpds = len(compound_ids)
     request_ids = []
     request_id = f"{str(uuid.uuid4())}_page_1"
     request_ids.append(request_id)
     execute_query_background_redis(
-        pool, request_id, compound_ids_list[:10], start_date, end_date
+        pool,
+        q,
+        query_results_lock,
+        request_id,
+        compound_ids[:10],
+        start_date,
+        end_date,
     )
     results = redis_conn.get(request_id)
     if nbr_cmpds > 10:
@@ -129,12 +140,14 @@ async def hset_redis(
         for i in range(num_batches):
             start_idx = 10 + i * 10
             end_idx = 10 + (i + 1) * 10
-            subset_compound_ids = compound_ids_list[start_idx:end_idx]
+            subset_compound_ids = compound_ids[start_idx:end_idx]
             request_id = f"{str(uuid.uuid4())}_page_{i+2}"
             request_ids.append(request_id)
             background_tasks.add_task(
                 execute_query_background_redis,
                 pool,
+                q,
+                query_results_lock,
                 request_id,
                 subset_compound_ids,
                 start_date,
