@@ -73,7 +73,6 @@ def execute_query_background_redis(
         cmpd_id: {
             k: main_payload[cmpd_id][k]
             for k in ["compound_id"] + list(sql_columns.keys())
-            if k in main_payload[cmpd_id]
         }
         for cmpd_id in main_payload
     }
