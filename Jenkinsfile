@@ -21,6 +21,7 @@ pipeline {
         ORACLE_USER = credentials('ORACLE_USER')
         ORACLE_PASS = credentials('ORACLE_PASS')
         REDIS_PASSWD = credentials('REDIS_PASSWD')
+        ENV = 'PROD'
         NAMESPACE = 'apps'
         APP_NAME = 'sar-view'
         AWS_PAGER = ''
