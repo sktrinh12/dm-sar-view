@@ -35,10 +35,11 @@ class OraclePoolCxn:
             user=self.user,
             password=self.password,
             dsn=dsn,
-            min=100,
+            min=91,
             max=150,
             increment=1,
             encoding="UTF-8",
+            max_lifetime_session=35,
         )
 
     def disconnect(self):
@@ -57,7 +58,9 @@ class OraclePoolCxn:
             rows = cursor.fetchall()
             return rows
 
-    def _process_rows(self, rows, queue, name, compound_id, sql_columns):
+    def _process_rows(
+        self, rows, queue, query_results_lock, name, compound_id, sql_columns
+    ):
         response = []
         payload = {}
         for row in rows:
@@ -74,8 +77,13 @@ class OraclePoolCxn:
             )
         payload[name] = response
         payload["compound_id"] = [{"FT_NUM": compound_id}]
-        queue.put((compound_id, payload))
+        with query_results_lock:
+            queue.put((compound_id, payload))
 
-    def execute_and_process(self, sql_stmt, queue, name, compound_id, sql_columns):
+    def execute_and_process(
+        self, sql_stmt, queue, query_results_lock, name, compound_id, sql_columns
+    ):
         rows = self.execute(sql_stmt)
-        self._process_rows(rows, queue, name, compound_id, sql_columns)
+        self._process_rows(
+            rows, queue, query_results_lock, name, compound_id, sql_columns
+        )
