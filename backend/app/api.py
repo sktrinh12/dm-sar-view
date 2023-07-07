@@ -110,6 +110,7 @@ async def hget_redis(request_id: str):
 async def hset_redis(
     background_tasks: BackgroundTasks,
     request_data: dict = Body(...),
+    max_workers: int = Query(default=10),
     date_filter: str = Query(
         f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}_{datetime.now().strftime("%m-%d-%Y")}'
     ),
@@ -120,7 +121,6 @@ async def hset_redis(
         raise HTTPException(status_code=400, detail="Invalid compound IDs")
     start_date, end_date = date_filter.split("_")
     print(f"{start_date} - {end_date}")
-    # compound_ids_list = compound_ids.split("-")
     nbr_cmpds = len(compound_ids)
     request_ids = []
     request_id = f"{str(uuid.uuid4())}_page_1"
@@ -133,6 +133,7 @@ async def hset_redis(
         compound_ids[:10],
         start_date,
         end_date,
+        max_workers,
     )
     results = redis_conn.get(request_id)
     if nbr_cmpds > 10:
@@ -152,6 +153,7 @@ async def hset_redis(
                 subset_compound_ids,
                 start_date,
                 end_date,
+                max_workers,
             )
     data = loads(results.decode())
     return JSONResponse(
