@@ -1,4 +1,3 @@
-import queue
 import threading
 from .redis_connection import redis_conn
 from json import dumps
@@ -34,10 +33,9 @@ def case_date_highlight(name, sql_stmt, case_txr, start_date, end_date):
 
 
 def execute_query_background_redis(
-    pool, request_id, compound_ids, start_date, end_date
+    pool, queue, query_results_lock, request_id, compound_ids, start_date, end_date
 ):
     threads = []
-    q = queue.Queue()
 
     for cmp in compound_ids:
         for name, sql in sql_stmts.items():
@@ -48,7 +46,7 @@ def execute_query_background_redis(
             threads.append(
                 threading.Thread(
                     target=pool.execute_and_process,
-                    args=(sql_stmt, q, name, cmp, sql_columns),
+                    args=(sql_stmt, queue, query_results_lock, name, cmp, sql_columns),
                 )
             )
 
@@ -59,8 +57,8 @@ def execute_query_background_redis(
 
     main_payload = {}
 
-    while not q.empty():
-        cmpd_id, payload = q.get()
+    while not queue.empty():
+        cmpd_id, payload = queue.get()
         if cmpd_id not in main_payload:
             main_payload[cmpd_id] = {}
         main_payload[cmpd_id].update(payload)
