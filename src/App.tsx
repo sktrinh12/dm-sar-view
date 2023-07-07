@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import 'react-datepicker/dist/react-datepicker.css'
 import { BACKEND_URL } from './BackendURL'
 import { compoundIdSort } from './sort'
+import { v4 as uuidv4 } from 'uuid'
 
 const Home: React.FC = () => {
   const [compoundIds, setCompoundIds] = useState<string[]>([])
@@ -60,6 +61,8 @@ const Home: React.FC = () => {
 
   const handleButtonClick = () => {
     const queryParams = new URLSearchParams()
+    const identifier = uuidv4()
+    sessionStorage.setItem(identifier, compoundIds.join('-'))
     queryParams.append(
       'date_filter',
       `${dateStart
@@ -76,7 +79,7 @@ const Home: React.FC = () => {
         })
         .replace(/\//g, '-')}`
     )
-    queryParams.append('compound_id', compoundIds.join('-'))
+    queryParams.append('session_id', identifier)
     console.log(`/sarView?${queryParams.toString()}`)
     navigate(`/sarView?${queryParams.toString()}`)
   }
