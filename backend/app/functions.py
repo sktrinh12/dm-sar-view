@@ -1,4 +1,4 @@
-import threading
+import concurrent.futures
 from .redis_connection import redis_conn
 from json import dumps
 from .sql import sql_columns, sql_stmts
@@ -33,27 +33,33 @@ def case_date_highlight(name, sql_stmt, case_txr, start_date, end_date):
 
 
 def execute_query_background_redis(
-    pool, queue, query_results_lock, request_id, compound_ids, start_date, end_date
+    pool,
+    queue,
+    query_results_lock,
+    request_id,
+    compound_ids,
+    start_date,
+    end_date,
+    max_workers,
 ):
-    threads = []
 
-    for cmp in compound_ids:
-        for name, sql in sql_stmts.items():
-            sql_stmt = sql.format(sql_columns[name], cmp)
-            sql_stmt = case_date_highlight(
-                name, sql_stmt, case_txr, start_date, end_date
-            )
-            threads.append(
-                threading.Thread(
-                    target=pool.execute_and_process,
-                    args=(sql_stmt, queue, query_results_lock, name, cmp, sql_columns),
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for cmp in compound_ids:
+            for name, sql in sql_stmts.items():
+                sql_stmt = sql.format(sql_columns[name], cmp)
+                sql_stmt = case_date_highlight(
+                    name, sql_stmt, case_txr, start_date, end_date
                 )
-            )
-
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+                future = executor.submit(
+                    pool.execute_and_process,
+                    sql_stmt,
+                    queue,
+                    query_results_lock,
+                    name,
+                    cmp,
+                    sql_columns,
+                )
+                future.result()
 
     main_payload = {}
 
