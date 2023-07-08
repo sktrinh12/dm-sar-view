@@ -29,21 +29,45 @@ const MainView: React.FC = () => {
     in_vivo_pk: [],
   })
 
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState<number>(1)
+  const [user, setUser] = useState<string>('')
 
   const handleNextPage = () => {
     setPage(page + 1)
+    if (page % 10 === 0) {
+      triggerNextBatch()
+    }
   }
 
   const handlePreviousPage = () => {
     setPage(page - 1)
   }
+
+  const triggerNextBatch = async () => {
+    try {
+      const nextBatchUrl = `${BACKEND_URL}/v1/next_batch?user=${user}`
+      const response = await axios.get(nextBatchUrl, axiosConfig)
+      console.log('Next batch triggered successfully')
+      console.log('Request IDs:', response.data.request_ids)
+    } catch (error) {
+      console.log('Error triggering next batch:', error)
+    }
+  }
+
   const [requestIds, setRequestIds] = useState<string[]>([])
   const [compoundIds, setCompoundIds] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [initialFetch, setInitialFetch] = useState<boolean>(true)
   const [disablePagination, setDisablePagination] = useState<boolean>(true)
   const compoundsPerPage = 10
+
+  const handleBeforeUnload = async () => {
+    await axios.post(
+      `${BACKEND_URL}/v1/cancel_batches?user=${user}`,
+      axiosConfig
+    )
+    console.log(`canceled batch of ${user}`)
+  }
 
   const fetchData = async (url: string, compoundIdsArray: Array<string>) => {
     setLoading(true)
@@ -83,24 +107,28 @@ const MainView: React.FC = () => {
     const fetchInitialData = async () => {
       const urlParams = new URLSearchParams(window.location.search)
       const urlParamsObj = Object.fromEntries(urlParams)
-      // console.log(urlParams.toString())
+      console.log(urlParams.toString())
 
       if (
         !urlParamsObj.hasOwnProperty('date_filter') ||
-        !urlParamsObj.hasOwnProperty('session_id')
+        !urlParamsObj.hasOwnProperty('session_id') ||
+        !urlParamsObj.hasOwnProperty('user')
       ) {
-        console.error('Error: Date or session ID is missing!')
+        console.error('Error: Date, session ID, and user are required!')
       }
       const dateFilter = urlParamsObj.date_filter
       const sessionIdParam = urlParamsObj.session_id
+      const userParam = urlParamsObj.user || sessionIdParam
+      setUser(userParam)
 
       const compoundIdsString = sessionStorage.getItem(sessionIdParam)
       const compoundIdsArray = compoundIdsString.split('-')
       compoundIdSort(compoundIdsArray)
       // console.log(compoundIdsArray)
       setCompoundIds(compoundIdsArray)
-      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}`
+      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&user=${userParam}`
       // console.log(initialUrl)
+      // console.log(userParam)
       await fetchData(initialUrl, compoundIdsArray)
     }
 
@@ -121,9 +149,13 @@ const MainView: React.FC = () => {
     }
     const timer = setTimeout(() => {
       setDisablePagination(false)
-    }, 5300)
+    }, 8300)
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
     return () => {
       clearTimeout(timer)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
@@ -157,7 +189,7 @@ const MainView: React.FC = () => {
               p: 1,
             }}
           >
-            <GoHomeIcon />
+            <GoHomeIcon handleBeforeUnload={handleBeforeUnload} />
             <Pagination
               handleNextPage={handleNextPage}
               handlePreviousPage={handlePreviousPage}
