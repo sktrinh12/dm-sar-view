@@ -36,6 +36,7 @@ app.add_middleware(
 
 query_results_lock = threading.Lock()
 q = queue.Queue()
+remaining_batches = {}
 
 
 def startup_event():
@@ -72,8 +73,19 @@ async def shutdown():
 def get_request_ids():
     regex_pattern = "*_page_*"
     request_ids = redis_conn.keys(regex_pattern)
-    json_data = dumps(request_ids)
-    return JSONResponse(content=json_data, media_type="application/json")
+    request_ids = [rid.decode("utf-8") for rid in request_ids]
+    return JSONResponse(content=dumps(request_ids), media_type="application/json")
+
+
+@app.get("/v1/del_request_ids")
+def del_request_ids():
+    deleted = []
+    regex_pattern = "*_page_*"
+    request_ids = redis_conn.keys(regex_pattern)
+    for request_id in request_ids:
+        redis_conn.delete(request_id)
+        deleted.append(request_id.decode("utf-8"))
+    return JSONResponse(content=dumps(deleted), media_type="application/json")
 
 
 @app.get("/v1/get_cmpid_from_tbl")
@@ -110,15 +122,17 @@ async def hget_redis(request_id: str):
 async def hset_redis(
     background_tasks: BackgroundTasks,
     request_data: dict = Body(...),
-    max_workers: int = Query(default=15),
+    max_workers: int = Query(default=30),
+    user: str = Query(default="TESTADMIN"),
     date_filter: str = Query(
         f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}_{datetime.now().strftime("%m-%d-%Y")}'
     ),
 ):
     compound_ids = request_data.get("compound_ids")
-    print(compound_ids)
+    print(f"compound id count: {len(compound_ids)}")
+    print(user)
     if compound_ids is None or compound_ids == "":
-        raise HTTPException(status_code=400, detail="Invalid compound IDs")
+        raise HTTPException(status_code=400, detail="Missing compound IDs")
     start_date, end_date = date_filter.split("_")
     print(f"{start_date} - {end_date}")
     nbr_cmpds = len(compound_ids)
@@ -137,6 +151,7 @@ async def hset_redis(
     )
     results = redis_conn.get(request_id)
     if nbr_cmpds > 10:
+        remaining_batches[f"{user}_batch"] = []
         num_batches = ceil((nbr_cmpds - 10) / 10)
         for i in range(num_batches):
             start_idx = 10 + i * 10
@@ -144,22 +159,85 @@ async def hset_redis(
             subset_compound_ids = compound_ids[start_idx:end_idx]
             request_id = f"{str(uuid.uuid4())}_page_{i+2}"
             request_ids.append(request_id)
+            if i < 10:
+                background_tasks.add_task(
+                    execute_query_background_redis,
+                    pool,
+                    q,
+                    query_results_lock,
+                    request_id,
+                    subset_compound_ids,
+                    start_date,
+                    end_date,
+                    max_workers,
+                )
+            else:
+                remaining_batches[f"{user}_batch"].append(
+                    (request_id, start_date, end_date, max_workers, subset_compound_ids)
+                )
+    data = loads(results.decode())
+    return JSONResponse(
+        content={
+            "request_ids": request_ids,
+            "data": data,
+        },
+        media_type="application/json",
+    )
+
+
+@app.get("/v1/next_batch")
+async def next_batch(
+    background_tasks: BackgroundTasks, user: str = Query(default="TESTADMIN")
+):
+    rtn_request_id = []
+    rtn_compound_ids_batch = []
+    if remaining_batches:
+        key = f"{user}_batch"
+        batches = remaining_batches[key][:10]
+        remaining_batches[key] = remaining_batches[key][10:]
+        for b in batches:
+            (
+                request_id,
+                start_date,
+                end_date,
+                max_workers,
+                compound_ids_batch,
+            ) = b
+            rtn_request_id.append(request_id)
+            rtn_compound_ids_batch.append(compound_ids_batch)
             background_tasks.add_task(
                 execute_query_background_redis,
                 pool,
                 q,
                 query_results_lock,
                 request_id,
-                subset_compound_ids,
+                compound_ids_batch,
                 start_date,
                 end_date,
                 max_workers,
             )
-    data = loads(results.decode())
     return JSONResponse(
         content={
-            "request_ids": request_ids,
-            "data": data,
+            "request_ids": rtn_request_id,
+            "compound_ids_batch": rtn_compound_ids_batch,
+        },
+        media_type="application/json",
+    )
+
+
+@app.get("/v1/get_remaining_batches")
+async def get_batches():
+    return JSONResponse(content={"batches": remaining_batches})
+
+
+@app.post("/v1/cancel_batches")
+async def cancel_batches(user: str):
+    if f"{user}_batch" in remaining_batches:
+        del remaining_batches[f"{user}_batch"]
+    return JSONResponse(
+        content={
+            "status": f"removed batches for {user}",
+            "remaining_batches": remaining_batches,
         },
         media_type="application/json",
     )
