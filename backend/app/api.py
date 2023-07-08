@@ -132,7 +132,7 @@ async def hget_redis(request_id: str):
 async def hset_redis(
     background_tasks: BackgroundTasks,
     request_data: dict = Body(...),
-    max_workers: int = Query(default=30),
+    max_workers: int = Query(default=50),
     user: str = Query(default="TESTADMIN"),
     date_filter: str = Query(
         (
