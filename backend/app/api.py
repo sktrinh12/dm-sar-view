@@ -111,7 +111,7 @@ async def fetch_cmpid_from(
             rtn_data = pool.execute(fetch_query)  # ignore member-error
             for cid in rtn_data:
                 cmpd_ids.append(cid[0])
-    return Response(content=cmpd_ids)
+    return Response(content=dumps(cmpd_ids))
 
 
 # get request id from redis for pagination
