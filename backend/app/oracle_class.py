@@ -35,7 +35,7 @@ class OraclePoolCxn:
             user=self.user,
             password=self.password,
             dsn=dsn,
-            min=100,
+            min=42,
             max=120,
             increment=1,
             encoding="UTF-8",
