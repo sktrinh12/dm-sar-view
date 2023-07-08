@@ -116,18 +116,30 @@ const MainView: React.FC = () => {
       ) {
         console.error('Error: Date, session ID, and user are required!')
       }
-      const dateFilter = urlParamsObj.date_filter
-      const sessionIdParam = urlParamsObj.session_id
-      const userParam = urlParamsObj.user || sessionIdParam
-      setUser(userParam)
+      let dateFilter: string
+      if (!urlParamsObj.hasOwnProperty('date_filter')) {
+        const currentDate = new Date()
+        currentDate.setDate(currentDate.getDate() - 7)
+        const oneWeekAgo = currentDate.toLocaleDateString('en-US')
+        dateFilter = `${oneWeekAgo}_${currentDate.toLocaleDateString('en-US')}`
+      } else {
+        dateFilter = urlParamsObj.date_filter
+      }
+      const sessionIdParam =
+        urlParamsObj.session_id || 'ebc7e7a0-6b88-42e6-a7e9-placeholder'
+      const userParam = urlParamsObj.user || 'TESTADMIN'
+      const userId = `${userParam}-${sessionIdParam}`
+      setUser(userId)
 
       const compoundIdsString = sessionStorage.getItem(sessionIdParam)
-      const compoundIdsArray = compoundIdsString.split('-')
+      const compoundIdsArray = compoundIdsString
+        ? compoundIdsString.split('-')
+        : []
       compoundIdSort(compoundIdsArray)
       // console.log(compoundIdsArray)
       setCompoundIds(compoundIdsArray)
-      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&user=${userParam}`
-      // console.log(initialUrl)
+      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&user=${userId}`
+      console.log(initialUrl)
       // console.log(userParam)
       await fetchData(initialUrl, compoundIdsArray)
     }
@@ -149,7 +161,7 @@ const MainView: React.FC = () => {
     }
     const timer = setTimeout(() => {
       setDisablePagination(false)
-    }, 8300)
+    }, 9500)
 
     window.addEventListener('beforeunload', handleBeforeUnload)
 
