@@ -22,7 +22,7 @@ const Home: React.FC = () => {
     const fetchCmpIds = async () => {
       const urlParams = new URLSearchParams(window.location.search)
       const urlParamsObj = Object.fromEntries(urlParams)
-      console.log(urlParams.toString())
+      // console.log(urlParams.toString())
 
       if (urlParamsObj.hasOwnProperty('dm_table')) {
         try {
@@ -62,6 +62,9 @@ const Home: React.FC = () => {
   const handleButtonClick = () => {
     const queryParams = new URLSearchParams()
     const identifier = uuidv4()
+
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlParamsObj = Object.fromEntries(urlParams)
     sessionStorage.setItem(identifier, compoundIds.join('-'))
     queryParams.append(
       'date_filter',
@@ -80,6 +83,7 @@ const Home: React.FC = () => {
         .replace(/\//g, '-')}`
     )
     queryParams.append('session_id', identifier)
+    queryParams.append('user', urlParamsObj.user)
     console.log(`/sarView?${queryParams.toString()}`)
     navigate(`/sarView?${queryParams.toString()}`)
   }
