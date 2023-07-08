@@ -14,6 +14,8 @@ from json import loads, dumps
 from .functions import execute_query_background_redis
 from .redis_connection import redis_conn
 from .sql import dm_table_cols
+from .globals import remaining_batches
+from .background_task import purge_expired_keys
 from os import getenv
 
 
@@ -36,13 +38,15 @@ app.add_middleware(
 
 query_results_lock = threading.Lock()
 q = queue.Queue()
-remaining_batches = {}
+ENV = getenv("ENV", "DEV")
+background_purge = threading.Thread(target=purge_expired_keys, daemon=True)
+background_purge.start()
 
 
 def startup_event():
     global pool
     pool = OraclePoolCxn(
-        cred_dct["HOST"] if getenv("ENV", "DEV") == "PROD" else cred_dct["HOST-DEV"],
+        cred_dct["HOST"] if ENV == "PROD" else cred_dct["HOST-DEV"],
         cred_dct["PORT"],
         cred_dct["SID"],
         cred_dct["USERNAME"],
@@ -69,6 +73,7 @@ async def shutdown():
     shutdown_event()
 
 
+# retrieve all request ids from redis
 @app.get("/v1/request_ids")
 def get_request_ids():
     regex_pattern = "*_page_*"
@@ -77,6 +82,7 @@ def get_request_ids():
     return JSONResponse(content=dumps(request_ids), media_type="application/json")
 
 
+# delete all request ids in redis
 @app.get("/v1/del_request_ids")
 def del_request_ids():
     deleted = []
@@ -88,6 +94,7 @@ def del_request_ids():
     return JSONResponse(content=dumps(deleted), media_type="application/json")
 
 
+# pass dm table name and grab compound ids
 @app.get("/v1/get_cmpid_from_tbl")
 async def fetch_cmpid_from(
     dm_table: str = Query(default="LIST_TESTADMIN_214006"),
@@ -95,29 +102,32 @@ async def fetch_cmpid_from(
     cmpd_ids = []
     if dm_table:
         col_query = dm_table_cols.format(dm_table)
-        column_name = pool.execute(col_query)
-        print(col_query)
+        column_name = pool.execute(col_query)  # ignore member-error
+        if ENV != "PROD":
+            print(col_query)
         if column_name:
             column_name = column_name[0][0]
             fetch_query = f"SELECT {column_name} AS cmpd_id FROM {dm_table}"
-            rtn_data = pool.execute(fetch_query)
+            rtn_data = pool.execute(fetch_query)  # ignore member-error
             for cid in rtn_data:
                 cmpd_ids.append(cid[0])
-    return cmpd_ids
+    return Response(content=cmpd_ids)
 
 
+# get request id from redis for pagination
 @app.get("/v1/sar_view_sql_hget")
 async def hget_redis(request_id: str):
     results_available = redis_conn.exists(request_id)
     if not results_available:
         raise HTTPException(status_code=404, detail="No query results available")
     results = redis_conn.get(request_id)
-    data = loads(results.decode())
+    data = loads(results.decode()) if results is not None else None
     return JSONResponse(
         content={"request_id": request_id, "data": data}, media_type="application/json"
     )
 
 
+# set request ids and trigger background task
 @app.post("/v1/sar_view_sql_hset")
 async def hset_redis(
     background_tasks: BackgroundTasks,
@@ -125,11 +135,17 @@ async def hset_redis(
     max_workers: int = Query(default=30),
     user: str = Query(default="TESTADMIN"),
     date_filter: str = Query(
-        f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}_{datetime.now().strftime("%m-%d-%Y")}'
+        (
+            f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}'
+            f'_{datetime.now().strftime("%m-%d-%Y")}'
+        )
     ),
 ):
     compound_ids = request_data.get("compound_ids")
-    print(f"compound id count: {len(compound_ids)}")
+    if compound_ids is not None:
+        print(f"compound id count: {len(compound_ids)}")
+    else:
+        print("No compound ids found.")
     print(user)
     if compound_ids is None or compound_ids == "":
         raise HTTPException(status_code=400, detail="Missing compound IDs")
@@ -173,9 +189,16 @@ async def hset_redis(
                 )
             else:
                 remaining_batches[f"{user}_batch"].append(
-                    (request_id, start_date, end_date, max_workers, subset_compound_ids)
+                    (
+                        request_id,
+                        start_date,
+                        end_date,
+                        max_workers,
+                        subset_compound_ids,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    )
                 )
-    data = loads(results.decode())
+    data = loads(results.decode()) if results is not None else None
     return JSONResponse(
         content={
             "request_ids": request_ids,
@@ -185,6 +208,7 @@ async def hset_redis(
     )
 
 
+# trigger next batch when page % 10 == 0
 @app.get("/v1/next_batch")
 async def next_batch(
     background_tasks: BackgroundTasks, user: str = Query(default="TESTADMIN")
@@ -196,13 +220,7 @@ async def next_batch(
         batches = remaining_batches[key][:10]
         remaining_batches[key] = remaining_batches[key][10:]
         for b in batches:
-            (
-                request_id,
-                start_date,
-                end_date,
-                max_workers,
-                compound_ids_batch,
-            ) = b
+            (request_id, start_date, end_date, max_workers, compound_ids_batch, _) = b
             rtn_request_id.append(request_id)
             rtn_compound_ids_batch.append(compound_ids_batch)
             background_tasks.add_task(
@@ -225,11 +243,14 @@ async def next_batch(
     )
 
 
+# show remaining batches for all users
 @app.get("/v1/get_remaining_batches")
 async def get_batches():
     return JSONResponse(content={"batches": remaining_batches})
 
 
+# cancel batches of 100 for specified user
+# must have the session id and user
 @app.post("/v1/cancel_batches")
 async def cancel_batches(user: str):
     if f"{user}_batch" in remaining_batches:
@@ -240,4 +261,12 @@ async def cancel_batches(user: str):
             "remaining_batches": remaining_batches,
         },
         media_type="application/json",
+    )
+
+
+# check background purge thread
+@app.get("/v1/thread_alive")
+async def thread_alive():
+    return JSONResponse(
+        content={"is_alive": background_purge.is_alive()}, media_type="application/json"
     )
