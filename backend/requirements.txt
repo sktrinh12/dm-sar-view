@@ -4,3 +4,4 @@ cx_Oracle
 fastapi-utils
 rdkit
 redis
+requests
