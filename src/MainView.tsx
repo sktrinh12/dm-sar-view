@@ -22,6 +22,7 @@ const axiosConfig = {
 }
 
 const MainView: React.FC = () => {
+  const compoundsPerPage = 10
   const [tableData, setTableData] = useState<TableDataType>({
     biochemical_geomean: [],
     cellular_geomean: [],
@@ -34,7 +35,7 @@ const MainView: React.FC = () => {
 
   const handleNextPage = () => {
     setPage(page + 1)
-    if (page % 10 === 0) {
+    if (page % compoundsPerPage === 0) {
       triggerNextBatch()
     }
   }
@@ -45,7 +46,7 @@ const MainView: React.FC = () => {
 
   const triggerNextBatch = async () => {
     try {
-      const nextBatchUrl = `${BACKEND_URL}/v1/next_batch?user=${user}`
+      const nextBatchUrl = `${BACKEND_URL}/v1/next_batch?user=${user}&pages=${compoundsPerPage}`
       const response = await axios.get(nextBatchUrl, axiosConfig)
       console.log('Next batch triggered successfully')
       console.log('Request IDs:', response.data.request_ids)
@@ -59,7 +60,6 @@ const MainView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [initialFetch, setInitialFetch] = useState<boolean>(true)
   const [disablePagination, setDisablePagination] = useState<boolean>(true)
-  const compoundsPerPage = 10
 
   const handleBeforeUnload = async () => {
     await axios.post(
@@ -138,7 +138,7 @@ const MainView: React.FC = () => {
       compoundIdSort(compoundIdsArray)
       // console.log(compoundIdsArray)
       setCompoundIds(compoundIdsArray)
-      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&user=${userId}`
+      const initialUrl = `${BACKEND_URL}/v1/sar_view_sql_hset?date_filter=${dateFilter}&user=${userId}&pages=${compoundsPerPage}`
       console.log(initialUrl)
       // console.log(userParam)
       await fetchData(initialUrl, compoundIdsArray)
