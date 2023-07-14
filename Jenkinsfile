@@ -63,6 +63,7 @@ pipeline {
                 --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
                 --build-arg REDIS_HOST=redis.kinnate \
                 --build-arg BACKEND_URL=sql-ds.kinnate \
+                --build-arg VERSION_NUMBER=${VERSION_NUMBER} \
                 -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest \
                 -f backend/Dockerfile.prod .
                 ''', returnStdout: true
