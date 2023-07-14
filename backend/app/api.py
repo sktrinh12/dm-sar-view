@@ -13,9 +13,10 @@ from .credentials import cred_dct
 from json import loads, dumps
 from .functions import execute_query_background_redis
 from .redis_connection import redis_conn
-from .sql import dm_table_cols
+from .sql import dm_table_cols, sql_stmts
 from .globals import remaining_batches
 from .background_task import purge_expired_keys
+from .datasource_sql import get_ds_sql
 from os import getenv
 
 
@@ -54,6 +55,11 @@ def startup_event():
     )
     pool.connect()
     print("Server startup")
+    # this needs to match dictionary.py key
+    ds_name = "biochemical"
+    payload = {ds_name: {"id": 912, "app_type": "geomean_sar"}}
+    sql = get_ds_sql(payload)
+    sql_stmts["biochemical_geomean"] = sql["0"]["formatted_query"]
 
 
 def shutdown_event():
@@ -71,6 +77,27 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     shutdown_event()
+
+
+# update sql statements dict
+@app.get("/v1/update_sql_ds")
+async def update_sql(
+    dict_name: str = Query(default="biochemical_geomean"),
+    ds_id: int = Query(default=912),
+    ds_name: str = Query(default="biochemical"),
+):
+    payload = {ds_name: {"id": ds_id, "app_type": "geomean_sar"}}
+    sql = get_ds_sql(payload)
+    sql_stmts[dict_name] = sql["0"]["formatted_query"]
+    return JSONResponse(
+        content={
+            "DS_NAME": ds_name,
+            "DICT_NAME": dict_name,
+            "DS_ID": ds_id,
+            "SQL_QUERY": sql_stmts[dict_name],
+        },
+        media_type="application/json",
+    )
 
 
 # retrieve all request ids from redis
@@ -134,6 +161,7 @@ async def hset_redis(
     request_data: dict = Body(...),
     max_workers: int = Query(default=50),
     user: str = Query(default="TESTADMIN"),
+    pages: int = Query(default=10),
     date_filter: str = Query(
         (
             f'{(datetime.now() - timedelta(days=7)).strftime("%m-%d-%Y")}'
@@ -160,22 +188,22 @@ async def hset_redis(
         q,
         query_results_lock,
         request_id,
-        compound_ids[:10],
+        compound_ids[:pages],
         start_date,
         end_date,
         max_workers,
     )
     results = redis_conn.get(request_id)
-    if nbr_cmpds > 10:
+    if nbr_cmpds > pages:
         remaining_batches[f"{user}_batch"] = []
-        num_batches = ceil((nbr_cmpds - 10) / 10)
+        num_batches = ceil((nbr_cmpds - pages) / pages)
         for i in range(num_batches):
-            start_idx = 10 + i * 10
-            end_idx = 10 + (i + 1) * 10
+            start_idx = pages + i * pages
+            end_idx = pages + (i + 1) * pages
             subset_compound_ids = compound_ids[start_idx:end_idx]
             request_id = f"{str(uuid.uuid4())}_page_{i+2}"
             request_ids.append(request_id)
-            if i < 10:
+            if i < pages:
                 background_tasks.add_task(
                     execute_query_background_redis,
                     pool,
@@ -208,17 +236,19 @@ async def hset_redis(
     )
 
 
-# trigger next batch when page % 10 == 0
+# trigger next batch when page % pages == 0
 @app.get("/v1/next_batch")
 async def next_batch(
-    background_tasks: BackgroundTasks, user: str = Query(default="TESTADMIN")
+    background_tasks: BackgroundTasks,
+    user: str,
+    pages: int = Query(default=10),
 ):
     rtn_request_id = []
     rtn_compound_ids_batch = []
     if remaining_batches:
         key = f"{user}_batch"
-        batches = remaining_batches[key][:10]
-        remaining_batches[key] = remaining_batches[key][10:]
+        batches = remaining_batches[key][:pages]
+        remaining_batches[key] = remaining_batches[key][pages:]
         for b in batches:
             (request_id, start_date, end_date, max_workers, compound_ids_batch, _) = b
             rtn_request_id.append(request_id)
