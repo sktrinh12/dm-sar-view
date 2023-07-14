@@ -78,6 +78,14 @@ async def shutdown():
     shutdown_event()
 
 
+@app.get("/")
+async def home():
+    return JSONResponse(
+        content=f'VERSION_NUMBER: {getenv("VERSION_NUMBER", 0.1)}',
+        media_type="application/json",
+    )
+
+
 # update sql statements dict
 @app.get("/v1/update_sql_ds")
 async def update_sql():
