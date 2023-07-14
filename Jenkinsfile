@@ -52,10 +52,18 @@ pipeline {
                 #!/bin/bash
                 set -x
                 docker build \
-                --no-cache --network=host --build-arg ORACLE_HOST=${ORACLE_HOST} --build-arg ENV=${ENV} \
-                --build-arg ORACLE_PORT=${ORACLE_PORT} --build-arg ORACLE_SID=${ORACLE_SID} --build-arg ORACLE_USER=${ORACLE_USER} \
-                --build-arg ORACLE_PASS=${ORACLE_PASS} --build-arg DB_TYPE=PROD --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
-                --build-arg REDIS_HOST=redis.kinnate -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest \
+                --no-cache --network=host \
+                --build-arg ENV=${ENV} \
+                --build-arg ORACLE_HOST=${ORACLE_HOST} \
+                --build-arg ORACLE_PORT=${ORACLE_PORT} \
+                --build-arg ORACLE_SID=${ORACLE_SID} \
+                --build-arg ORACLE_USER=${ORACLE_USER} \
+                --build-arg ORACLE_PASS=${ORACLE_PASS} \
+                --build-arg DB_TYPE=PROD \
+                --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
+                --build-arg REDIS_HOST=redis.kinnate \
+                --build-arg BACKEND_URL=sql-ds.kinnate \
+                -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest \
                 -f backend/Dockerfile.prod .
                 ''', returnStdout: true
                 )
