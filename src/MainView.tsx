@@ -22,7 +22,7 @@ const axiosConfig = {
 }
 
 const MainView: React.FC = () => {
-  const compoundsPerPage = 10
+  const compoundsPerPage = 20
   const [tableData, setTableData] = useState<TableDataType>({
     biochemical_geomean: [],
     cellular_geomean: [],
