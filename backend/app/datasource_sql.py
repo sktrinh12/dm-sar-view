@@ -7,7 +7,7 @@ def get_ds_sql(payload):
 
     response = requests.get(url, json=payload)
     if response.status_code == 200:
-        print(f"update {ds_name} ({payload[ds_name]['id']})")
+        print(f"update {payload['0']['ds']} ({payload['0']['id']})")
         return response.json()
     else:
         err = f"Error: {response.status_code} - {response.text}"
