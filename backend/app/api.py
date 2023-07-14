@@ -55,11 +55,10 @@ def startup_event():
     )
     pool.connect()
     print("Server startup")
-    # this needs to match dictionary.py key
-    ds_name = "biochemical"
-    payload = {ds_name: {"id": 912, "app_type": "geomean_sar"}}
+    payload = {"biochemical": {"id": 912, "app_type": "geomean_sar"}}
     sql = get_ds_sql(payload)
     sql_stmts["biochemical_geomean"] = sql["0"]["formatted_query"]
+    print("Updated biochemical geomean sql")
 
 
 def shutdown_event():
@@ -81,23 +80,17 @@ async def shutdown():
 
 # update sql statements dict
 @app.get("/v1/update_sql_ds")
-async def update_sql(
-    dict_name: str = Query(default="biochemical_geomean"),
-    ds_id: int = Query(default=912),
-    ds_name: str = Query(default="biochemical"),
-):
-    payload = {ds_name: {"id": ds_id, "app_type": "geomean_sar"}}
-    sql = get_ds_sql(payload)
-    sql_stmts[dict_name] = sql["0"]["formatted_query"]
-    return JSONResponse(
-        content={
-            "DS_NAME": ds_name,
-            "DICT_NAME": dict_name,
-            "DS_ID": ds_id,
-            "SQL_QUERY": sql_stmts[dict_name],
-        },
-        media_type="application/json",
-    )
+async def update_sql():
+    dct_names = {
+        "biochemical_geomean": {"ds_alias": "biochemical", "id": 912},
+    }
+    for key, dct in dct_names.items():
+        payload = {dct["ds_alias"]: {"id": dct["id"], "app_type": "geomean_sar"}}
+        sql = get_ds_sql(payload)
+        sql_query = sql["0"]["formatted_query"]
+        dct_names[key]["sql_query"] = sql_query
+        sql_stmts[list(dct_names.keys())[0]] = sql_query
+    return dct_names
 
 
 # retrieve all request ids from redis
