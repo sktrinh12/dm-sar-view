@@ -10,12 +10,16 @@ def purge_expired_keys():
         current_time = datetime.now()
         keys_to_remove = []
         for key, lst in remaining_batches.items():
-            for *_, timestamp in lst:
-                timestamp_obj = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-                if (
-                    current_time - timestamp_obj > duration
-                ):  # Check if timestamp is older than 5 hours
-                    keys_to_remove.append(key)
+            if lst:
+                for *_, timestamp in lst:
+                    timestamp_obj = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+                    if (
+                        current_time - timestamp_obj > duration
+                    ):  # Check if timestamp is older than 5 hours
+                        keys_to_remove.append(key)
+            else:
+                # empty batches
+                keys_to_remove.append(key)
         for key in keys_to_remove:
             print(f"deleting batch key, {key}")
             del remaining_batches[key]
