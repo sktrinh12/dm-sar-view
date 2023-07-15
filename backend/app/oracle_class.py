@@ -1,6 +1,7 @@
 import cx_Oracle
 from os import getenv
 from .rdkit import chem_draw
+from .worker_count import workers
 
 
 oracle_dir = getenv(
@@ -35,7 +36,7 @@ class OraclePoolCxn:
             user=self.user,
             password=self.password,
             dsn=dsn,
-            min=50,
+            min=workers,
             max=120,
             increment=1,
             encoding="UTF-8",

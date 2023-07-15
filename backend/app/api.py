@@ -17,6 +17,7 @@ from .sql import dm_table_cols, sql_stmts
 from .globals import remaining_batches
 from .background_task import purge_expired_keys
 from .datasource_sql import get_ds_sql
+from .worker_count import workers
 from os import getenv
 
 
@@ -160,7 +161,7 @@ async def hget_redis(request_id: str):
 async def hset_redis(
     background_tasks: BackgroundTasks,
     request_data: dict = Body(...),
-    max_workers: int = Query(default=50),
+    max_workers: int = Query(default=workers),
     user: str = Query(default="TESTADMIN"),
     pages: int = Query(default=10),
     date_filter: str = Query(
