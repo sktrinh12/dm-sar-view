@@ -10,6 +10,7 @@ const TableRow = styled('tr')({
 })
 
 const minWidthByKeys = {
+  row: '42px',
   biochemical_geomean: '600px',
   cellular_geomean: '580px',
   in_vivo_pk: '350px',
@@ -108,12 +109,28 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                         .filter((columnKey) => columnKey !== 'DATE_HIGHLIGHT')
                         .map((columnKey) => {
                           const value = item[columnKey]
-                          const truncatedValue =
-                            typeof value === 'number' ? value.toFixed(2) : value
-                          const displayValue =
-                            value !== null && value !== undefined
-                              ? truncatedValue
+                          let displayValue: string
+                          if (columnKey === 'Row') {
+                            displayValue = Number.isInteger(value)
+                              ? value.toString()
                               : '-'
+                          } else {
+                            let truncatedValue: string
+
+                            if (typeof value === 'number') {
+                              truncatedValue =
+                                value % 1 === 0
+                                  ? value.toString()
+                                  : value.toFixed(2)
+                            } else {
+                              truncatedValue = value
+                            }
+
+                            displayValue =
+                              value !== null && value !== undefined
+                                ? truncatedValue
+                                : '-'
+                          }
                           if (columnKey === 'MOLFILE') {
                             const link = `https://dotmatics.kinnate.com/browser/query/browse.jsp?currentPrimary=${cmpdId}`
                             return (
