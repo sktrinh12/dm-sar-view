@@ -42,7 +42,6 @@ def execute_query_background_redis(
     end_date,
     max_workers,
 ):
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for cmp in compound_ids:
             for name, sql in sql_stmts.items():
@@ -71,10 +70,13 @@ def execute_query_background_redis(
 
     sorted_payload = {
         cmpd_id: {
-            k: main_payload[cmpd_id][k]
-            for k in ["compound_id"] + list(sql_columns.keys())
+            "row": [{"row": n}],
+            **{
+                k: main_payload[cmpd_id][k]
+                for k in ["compound_id"] + list(sql_columns.keys())
+            },
         }
-        for cmpd_id in main_payload
+        for n, cmpd_id in enumerate(main_payload, 1)
     }
 
     redis_conn.set(request_id, dumps(sorted_payload))
