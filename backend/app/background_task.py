@@ -21,6 +21,6 @@ def purge_expired_keys():
                 # empty batches
                 keys_to_remove.append(key)
         for key in keys_to_remove:
-            print(f"deleting batch key, {key}")
+            print(f"{current_time} deleting batch key, {key}")
             del remaining_batches[key]
         sleep(3600)
