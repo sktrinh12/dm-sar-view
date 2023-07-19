@@ -9,7 +9,8 @@ def purge_expired_keys():
     while True:
         current_time = datetime.now()
         keys_to_remove = []
-        for key, lst in remaining_batches.items():
+        remaining_batches_copy = remaining_batches.copy()
+        for key, lst in remaining_batches_copy.items():
             if lst:
                 for *_, timestamp in lst:
                     timestamp_obj = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
