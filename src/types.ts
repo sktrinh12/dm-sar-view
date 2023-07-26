@@ -1,8 +1,11 @@
 export interface TableDataType {
-  biochemical_geomean: BiochemicalGeomean[]
   cellular_geomean: CellularGeomean[]
   compound_batch: CompoundBatch[]
   in_vivo_pk: InVivoPK[]
+}
+
+export interface BioTableDataType {
+  biochemical_geomean: BiochemicalGeomean[]
 }
 
 interface BiochemicalGeomean {
