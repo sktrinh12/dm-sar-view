@@ -9,13 +9,15 @@ celery = Celery(
     backend=f"redis://:{getenv('REDIS_PASSWD')}@{getenv('REDIS_HOST', '127.0.0.1')}:{getenv('REDIS_PORT', '6379')}/0",
 )
 
+celery.conf.result_expires = 3600
+
 
 @celery.task
 def exec_proc_outer(args_data):
     sql_stmt = args_data["sql_stmt"]
     name = args_data["name"]
     compound_id = args_data["cmp"]
-    sql_columns = args_data["sql_columns"]
+    sql_column = args_data["sql_column"]
     cxn = OracleCxn(
         cred_dct["HOST"],
         cred_dct["PORT"],
@@ -23,5 +25,7 @@ def exec_proc_outer(args_data):
         cred_dct["USERNAME"],
         cred_dct["PASSWORD"],
     )
-    payload = cxn.execute_and_process(sql_stmt, name, compound_id, sql_columns)
+    payload = cxn.execute_and_process(
+        sql_stmt, name, compound_id, sql_column, None, False
+    )
     return payload
