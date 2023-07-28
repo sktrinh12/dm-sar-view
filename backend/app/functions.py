@@ -77,7 +77,11 @@ def execute_query_background_redis_celery(
             sql_colm = sql_columns[name]
             if name == "biochemical_geomean":
                 column_names = sql_colm.split(", ")
-                columns_to_remove = ["COMPOUND_ID", "CRO", "CREATED_DATE"]
+                columns_to_remove = [
+                    "COMPOUND_ID",
+                    "CRO",
+                    "CREATED_DATE",
+                ]
                 filtered_column_names = [
                     column for column in column_names if column not in columns_to_remove
                 ]
