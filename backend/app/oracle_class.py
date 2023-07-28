@@ -1,7 +1,7 @@
 import cx_Oracle
 from os import getenv
 from .rdkit import chem_draw
-from .worker_count import workers
+from threading import Lock
 
 
 oracle_dir = getenv(
@@ -11,14 +11,16 @@ oracle_dir = getenv(
 cx_Oracle.init_oracle_client(lib_dir=oracle_dir)
 
 
-class OraclePoolCxn:
+class OracleCxn:
     def __init__(self, host, port, sid, user, password):
         self.host = host
         self.port = port
         self.sid = sid
         self.user = user
         self.password = password
+        self.dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
         self.pool = None
+        self.queue_lock = Lock()
 
     def output_type_handler(self, cursor, name, default_type, size, precision, scale):
         if default_type == cx_Oracle.DB_TYPE_CLOB:
@@ -30,25 +32,25 @@ class OraclePoolCxn:
                 cx_Oracle.DB_TYPE_LONG_NVARCHAR, arraysize=cursor.arraysize
             )
 
-    def connect(self):
-        dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
+    def pool_connect(self):
         self.pool = cx_Oracle.SessionPool(
             user=self.user,
             password=self.password,
-            dsn=dsn,
-            min=workers,
-            max=120,
+            dsn=self.dsn,
+            min=5,
+            max=12,
             increment=1,
+            threaded=True,
             encoding="UTF-8",
             max_lifetime_session=35,
         )
 
-    def disconnect(self):
+    def pool_disconnect(self):
         if self.pool is not None:
             self.pool.close()
             self.pool = None
 
-    def execute(
+    def pool_execute(
         self,
         sql_stmt,
     ):
@@ -59,32 +61,52 @@ class OraclePoolCxn:
             rows = cursor.fetchall()
             return rows
 
-    def _process_rows(
-        self, rows, queue, query_results_lock, name, compound_id, sql_columns
+    def execute(
+        self,
+        sql_stmt,
     ):
-        response = []
-        payload = {}
-        for row in rows:
-            row_values = []
-            for value in row:
-                if name == "mol_structure":
-                    value = chem_draw(value, 150)
-                row_values.append(value)
-            response.append(
-                dict(
-                    (key.strip(), value)
-                    for key, value in zip(sql_columns[name].split(","), row_values)
+        with cx_Oracle.connect(
+            user=self.user, password=self.password, dsn=self.dsn, encoding="UTF-8"
+        ) as connection:
+            connection.outputtypehandler = self.output_type_handler
+            cursor = connection.cursor()
+            cursor.execute(sql_stmt)
+            rows = cursor.fetchall()
+            return rows
+
+    def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
+        with self.queue_lock:
+            response = []
+            payload = {}
+            for row in rows:
+                row_values = []
+                sec_last = len(row) - 2
+                for i, value in enumerate(row):
+                    if name == "mol_structure":
+                        value = chem_draw(value, 150)
+                    elif name == "biochemical_geomean":
+                        if i in [0, 1, sec_last]:
+                            continue
+                    row_values.append(value)
+                response.append(
+                    dict(
+                        (key.strip(), value)
+                        for key, value in zip(sql_column.split(","), row_values)
+                    )
                 )
-            )
-        payload[name] = response
-        payload["compound_id"] = [{"FT_NUM": compound_id}]
-        with query_results_lock:
+            # print(compound_id)
+            payload[name] = response
+            payload["compound_id"] = [{"FT_NUM": compound_id}]
+
+        if queue:
             queue.put((compound_id, payload))
+        return compound_id, payload
 
     def execute_and_process(
-        self, sql_stmt, queue, query_results_lock, name, compound_id, sql_columns
+        self, sql_stmt, name, compound_id, sql_column, queue, pool=False
     ):
-        rows = self.execute(sql_stmt)
-        self._process_rows(
-            rows, queue, query_results_lock, name, compound_id, sql_columns
-        )
+        if pool:
+            rows = self.pool_execute(sql_stmt)
+        else:
+            rows = self.execute(sql_stmt)
+        return self._process_rows(rows, name, compound_id, sql_column, queue)
