@@ -4,13 +4,15 @@ import Table from '@mui/material/Table'
 import TableContainer from '@mui/material/TableContainer'
 import { TableDataType } from './types'
 import { styled } from '@mui/system'
+import ReactLoading from 'react-loading'
+import { colour } from './Colour'
 
 const TableRow = styled('tr')({
   fontSize: '13.5px',
 })
 
 const minWidthByKeys = {
-  row: '42px',
+  row: '40px',
   biochemical_geomean: '600px',
   cellular_geomean: '580px',
   in_vivo_pk: '350px',
@@ -21,17 +23,23 @@ const minWidthByKeys = {
   protein_binding: '300px',
   solubility: '100px',
   stability: '340px',
+  mol_structure: '150px',
 }
 
-export default function TableGrid({ tableData }: { tableData: TableDataType }) {
+export default function TableGrid({
+  tableData,
+  bioLoading,
+}: {
+  tableData: TableDataType
+  bioLoading: boolean
+}) {
   return Object.keys(tableData).map((cmpdId, index) => (
     <div
       key={`div-row-${cmpdId}-${index}`}
       style={{
-        display: 'flex',
-        borderTop: '2.75px solid black',
         paddingTop: '2px',
         marginTop: '2px',
+        display: 'flex',
       }}
     >
       {Object.keys(tableData[cmpdId]).map((key) => {
@@ -42,7 +50,7 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
             style={{
               flex: '0 0 auto',
               margin: '4px',
-              minWidth: minWidthByKeys[key] || '95px',
+              minWidth: minWidthByKeys[key] || '112px',
             }}
           >
             <h3>
@@ -62,18 +70,41 @@ export default function TableGrid({ tableData }: { tableData: TableDataType }) {
                           <th
                             key={columnKey}
                             style={{
-                              borderBottomWidth: '1px',
-                              borderBottomStyle: 'solid',
+                              borderTopWidth: '0.5px',
+                              borderTopStyle: 'solid',
                               textAlign: 'left',
                               padding: '4px',
                             }}
                           >
-                            {columnKey
-                              .replace(/_/g, ' ')
-                              .toLowerCase()
-                              .replace(/\b\w/g, (match) => match.toUpperCase())}
+                            {columnKey !== 'row' && columnKey !== 'FT_NUM'
+                              ? columnKey
+                                  .replace(/_/g, ' ')
+                                  .toLowerCase()
+                                  .replace(/\b\w/g, (match) =>
+                                    match.toUpperCase()
+                                  )
+                              : '\u00A0'}
                           </th>
                         ))
+                    ) : key === 'biochemical_geomean' && bioLoading ? (
+                      <td>
+                        <div
+                          style={{
+                            margin: 'auto',
+                            padding: '4px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <ReactLoading
+                            type='spin'
+                            color={colour}
+                            height={32}
+                            width={32}
+                          />
+                        </div>
+                      </td>
                     ) : (
                       <th
                         style={{
