@@ -76,7 +76,7 @@ class OracleCxn:
 
     def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
         split_colms = sql_column.split(",")
-        date_idx = len(split_colms) - 2
+        date_idx = len(split_colms) - 1
         with self.queue_lock:
             response = []
             payload = {}
