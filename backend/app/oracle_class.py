@@ -37,7 +37,7 @@ class OracleCxn:
             user=self.user,
             password=self.password,
             dsn=self.dsn,
-            min=5,
+            min=4,
             max=12,
             increment=1,
             threaded=True,
@@ -75,23 +75,24 @@ class OracleCxn:
             return rows
 
     def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
+        split_colms = sql_column.split(",")
+        date_idx = len(split_colms) - 2
         with self.queue_lock:
             response = []
             payload = {}
             for row in rows:
                 row_values = []
-                sec_last = len(row) - 2
                 for i, value in enumerate(row):
                     if name == "mol_structure":
                         value = chem_draw(value, 150)
                     elif name == "biochemical_geomean":
-                        if i in [0, 1, sec_last]:
+                        if i == date_idx:
                             continue
                     row_values.append(value)
                 response.append(
                     dict(
                         (key.strip(), value)
-                        for key, value in zip(sql_column.split(","), row_values)
+                        for key, value in zip(split_colms, row_values)
                     )
                 )
             # print(compound_id)
