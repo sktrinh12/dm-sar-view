@@ -199,7 +199,7 @@ export default function TableGrid({
                               style={{
                                 borderBottomWidth: '1px',
                                 borderBottomStyle: 'solid',
-                                padding: '4px',
+                                padding: '3px',
                                 margin: 0,
                               }}
                             >
