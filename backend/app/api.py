@@ -50,9 +50,8 @@ def startup_event():
     payload = {"biochemical": {"id": 912, "app_type": "geomean_sar"}}
     sql = get_ds_sql(payload)
     sql_stmts["biochemical_geomean"] = sql["0"]["formatted_query"]
-    print("Updated biochemical geomean sql")
-    if getenv("ORACLE_HOST") is None:
-        print(sql_stmts["biochemical_geomean"])
+    print("----Updated biochemical geomean sql----")
+    print(sql_stmts["biochemical_geomean"])
 
 
 @app.on_event("startup")
