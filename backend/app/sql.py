@@ -1,6 +1,6 @@
 sql_columns = {
     "mol_structure": "MOLFILE",
-    "biochemical_geomean": "COMPOUND_ID, CRO, ASSAY_TYPE, TARGET, VARIANT, COFACTORS, GEO_NM, N_OF_M, CREATED_DATE, DATE_HIGHLIGHT",
+    "biochemical_geomean": "ASSAY_TYPE, TARGET, VARIANT, COFACTORS, GEO_NM, N_OF_M, DATE_HIGHLIGHT",
     "cellular_geomean": "CELL, VARIANT, GEO_NM, ASSAY_TYPE, N_OF_M, DATE_HIGHLIGHT",
     "permeability": "A_B, B_A, EFFLUX_RATIO, CELL_TYPES, PCT_RECOVERY_AB, DATE_HIGHLIGHT",
     "protein_binding": "SPECIES, MATRIX, PCT_UNBOUND, DATE_HIGHLIGHT",
