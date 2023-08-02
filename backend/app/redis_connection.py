@@ -6,3 +6,4 @@ redis_conn = redis.Redis(
     port=int(getenv("REDIS_PORT", 6379)),
     password=getenv("REDIS_PASSWD"),
 )
+print(f'redis cache: {getenv("REDIS_HOST")}')
