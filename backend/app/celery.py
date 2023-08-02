@@ -24,7 +24,7 @@ def exec_proc_outer(args_data):
             None,
             getenv("PG_NAME"),
             getenv("PG_USER"),
-            getenv("PG_PASSWORD"),
+            getenv("PG_PASSWORD").strip(),
             True,
         )
     else:
