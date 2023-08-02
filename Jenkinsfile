@@ -15,13 +15,13 @@ pipeline {
         AWSID = credentials('AWSID')
         DOCKER_PSW = credentials('DOCKER_PASSWORD')
         DOCKER_CONFIG = "${WORKSPACE}/docker.config"
-        ORACLE_HOST = 'dotoradb.fount'
+        ORACLE_HOST = 'dotoradb-2022-0530-dev.fount.fount'
         ORACLE_PORT = 1521
         ORACLE_SID = credentials('ORACLE_SID')
         ORACLE_USER = credentials('ORACLE_USER')
         ORACLE_PASS = credentials('ORACLE_PASS')
         REDIS_PASSWD = credentials('REDIS_PASSWD')
-        ENV = 'PROD'
+        ENV = 'DEV'
         NAMESPACE = 'apps'
         APP_NAME = 'sar-view'
         AWS_PAGER = ''
@@ -59,7 +59,6 @@ pipeline {
                 --build-arg ORACLE_SID=${ORACLE_SID} \
                 --build-arg ORACLE_USER=${ORACLE_USER} \
                 --build-arg ORACLE_PASS=${ORACLE_PASS} \
-                --build-arg DB_TYPE=PROD \
                 --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
                 --build-arg REDIS_HOST=redis-dev.kinnate \
                 --build-arg BACKEND_URL=sql-ds.kinnate \
