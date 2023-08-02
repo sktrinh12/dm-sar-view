@@ -99,7 +99,7 @@ pipeline {
                 --no-cache --network=host \
                 --build-arg REACT_APP_BACKEND_URL=http://${APP_NAME}-backend.kinnate \
                 --build-arg REACT_APP_VERSION=${VERSION_NUMBER} \
-                --build-arg REACT_APP_ENVIRONMENT=PROD \
+                --build-arg REACT_APP_ENVIRONMENT=${ENV} \
                 --memory="2g" --memory-swap="4g" \
                 -t $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend \
                 -f Dockerfile.prod .
