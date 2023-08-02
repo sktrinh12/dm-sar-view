@@ -38,12 +38,20 @@ case_txr = {
 def case_date_highlight(name, sql_stmt, case_txr, start_date, end_date):
     if name in case_txr:
         case_info = case_txr[name]
-        sql_stmt = sql_stmt.replace(
-            "DATE_HIGHLIGHT",
-            f"""CASE WHEN TRUNC({case_info}) >= TO_DATE('{start_date}',
-            'MM-DD-YYYY') AND TRUNC({case_info}) <= TO_DATE('{end_date}',
-            'MM-DD-YYYY')  THEN 1 ELSE 0 END DATE_HIGHLIGHT""",
-        )
+        if name == "biochemical_geomean":
+            sql_stmt = sql_stmt.replace(
+                "DATE_HIGHLIGHT",
+                f"""CASE WHEN {case_info}::DATE >= '{start_date}'::DATE
+                AND {case_info}::DATE <= '{end_date}'::DATE
+                THEN 1 ELSE 0 END DATE_HIGHLIGHT""",
+            )
+        else:
+            sql_stmt = sql_stmt.replace(
+                "DATE_HIGHLIGHT",
+                f"""CASE WHEN TRUNC({case_info}) >= TO_DATE('{start_date}',
+                'MM-DD-YYYY') AND TRUNC({case_info}) <= TO_DATE('{end_date}',
+                'MM-DD-YYYY')  THEN 1 ELSE 0 END DATE_HIGHLIGHT""",
+            )
     else:
         sql_stmt = sql_stmt.replace(
             "DATE_HIGHLIGHT",
@@ -71,32 +79,28 @@ def execute_query_background_redis_celery(
     group_tasks = []
     for cmp in compound_ids:
         sub_tasks = []
+        args_data = {"cmp": cmp}
+        if fast_type == -1:
+            args_data["pg_db"] = True
         for name, sql in sql_stmts.items():
             if name in negation:
                 continue
             sql_colm = sql_columns[name]
-            if name == "biochemical_geomean":
-                column_names = sql_colm.split(", ")
-                columns_to_remove = [
-                    "COMPOUND_ID",
-                    "CRO",
-                    "CREATED_DATE",
-                ]
-                filtered_column_names = [
-                    column for column in column_names if column not in columns_to_remove
-                ]
-                sql_colm = ", ".join(filtered_column_names)
+            # if name == "biochemical_geomean":
+            #     column_names = sql_colm.split(", ")
+            #     filtered_column_names = [
+            #         column for column in column_names if column != "CREATED_DATE"
+            #     ]
+            #     sql_colm = ", ".join(filtered_column_names)
             sql_stmt = sql.format(sql_colm, cmp)
             sql_stmt = case_date_highlight(
                 name, sql_stmt, case_txr, start_date, end_date
             )
-            # print(sql_stmt)
-            args_data = {
-                "sql_stmt": sql_stmt,
-                "name": name,
-                "cmp": cmp,
-                "sql_column": sql_colm,
-            }
+            print(sql_stmt)
+            print("-" * 50)
+            args_data["sql_stmt"] = sql_stmt
+            args_data["name"] = name
+            args_data["sql_column"] = sql_colm
             sub_tasks.append(exec_proc_outer.s(args_data))
         group_tasks.append(group(sub_tasks))
 
@@ -149,6 +153,7 @@ def execute_query_background_redis_thread(
         cred_dct["USERNAME"],
         cred_dct["PASSWORD"],
     )
+    orcl.dsn()
     orcl.pool_connect()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
@@ -158,15 +163,12 @@ def execute_query_background_redis_thread(
                 if name in negation:
                     continue
                 sql_colm = sql_columns[name]
-                if name == "biochemical_geomean":
-                    column_names = sql_colm.split(", ")
-                    columns_to_remove = ["COMPOUND_ID", "CRO", "CREATED_DATE"]
-                    filtered_column_names = [
-                        column
-                        for column in column_names
-                        if column not in columns_to_remove
-                    ]
-                    sql_colm = ", ".join(filtered_column_names)
+                # if name == "biochemical_geomean":
+                #     column_names = sql_colm.split(", ")
+                #     filtered_column_names = [
+                #         column for column in column_names if column != "CREATED_DATE"
+                #     ]
+                #     sql_colm = ", ".join(filtered_column_names)
                 sql_stmt = sql.format(sql_colm, cmp)
                 sql_stmt = case_date_highlight(
                     name, sql_stmt, case_txr, start_date, end_date

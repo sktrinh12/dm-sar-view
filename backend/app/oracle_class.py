@@ -2,6 +2,7 @@ import cx_Oracle
 from os import getenv
 from .rdkit import chem_draw
 from threading import Lock
+import psycopg2
 
 
 oracle_dir = getenv(
@@ -12,14 +13,15 @@ cx_Oracle.init_oracle_client(lib_dir=oracle_dir)
 
 
 class OracleCxn:
-    def __init__(self, host, port, sid, user, password):
+    def __init__(self, host, port, sid, user, password, pg_db=False):
         self.host = host
         self.port = port
         self.sid = sid
         self.user = user
         self.password = password
-        self.dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
+        self._dsn = None
         self.pool = None
+        self.pg_db = pg_db
         self.queue_lock = Lock()
 
     def output_type_handler(self, cursor, name, default_type, size, precision, scale):
@@ -32,11 +34,14 @@ class OracleCxn:
                 cx_Oracle.DB_TYPE_LONG_NVARCHAR, arraysize=cursor.arraysize
             )
 
+    def dsn(self):
+        self._dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
+
     def pool_connect(self):
         self.pool = cx_Oracle.SessionPool(
             user=self.user,
             password=self.password,
-            dsn=self.dsn,
+            dsn=self._dsn,
             min=4,
             max=12,
             increment=1,
@@ -66,12 +71,21 @@ class OracleCxn:
         sql_stmt,
     ):
         with cx_Oracle.connect(
-            user=self.user, password=self.password, dsn=self.dsn, encoding="UTF-8"
+            user=self.user, password=self.password, dsn=self._dsn, encoding="UTF-8"
         ) as connection:
             connection.outputtypehandler = self.output_type_handler
             cursor = connection.cursor()
             cursor.execute(sql_stmt)
             rows = cursor.fetchall()
+            return rows
+
+    def pg_execute(self, sql_stmt):
+        with psycopg2.connect(
+            host=self.host, dbname=self.sid, user=self.user, password=self.password
+        ) as connection:
+            pg_cursor = connection.cursor()
+            pg_cursor.execute(sql_stmt)
+            rows = pg_cursor.fetchall()
             return rows
 
     def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
@@ -106,8 +120,12 @@ class OracleCxn:
     def execute_and_process(
         self, sql_stmt, name, compound_id, sql_column, queue, pool=False
     ):
-        if pool:
-            rows = self.pool_execute(sql_stmt)
+        if self.pg_db:
+            rows = self.pg_execute(sql_stmt)
+            return self._process_rows(rows, name, compound_id, sql_column, queue)
         else:
-            rows = self.execute(sql_stmt)
-        return self._process_rows(rows, name, compound_id, sql_column, queue)
+            if pool:
+                rows = self.pool_execute(sql_stmt)
+            else:
+                rows = self.execute(sql_stmt)
+            return self._process_rows(rows, name, compound_id, sql_column, queue)

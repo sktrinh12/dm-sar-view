@@ -45,18 +45,18 @@ background_purge = threading.Thread(target=purge_expired_keys, daemon=True)
 background_purge.start()
 
 
-def startup_event():
-    print("Server startup")
-    payload = {"biochemical": {"id": 912, "app_type": "geomean_sar"}}
-    sql = get_ds_sql(payload)
-    sql_stmts["biochemical_geomean"] = sql["0"]["formatted_query"]
-    print("----Updated biochemical geomean sql----")
-    print(sql_stmts["biochemical_geomean"])
+# def startup_event():
+#     print("Server startup")
+#     payload = {"biochemical": {"id": 912, "app_type": "geomean_sar"}}
+#     sql = get_ds_sql(payload)
+#     sql_stmts["biochemical_geomean"] = sql["0"]["formatted_query"]
+#     print("----Updated biochemical geomean sql----")
+#     print(sql_stmts["biochemical_geomean"])
 
 
-@app.on_event("startup")
-async def startup():
-    startup_event()
+# @app.on_event("startup")
+# async def startup():
+#     startup_event()
 
 
 @app.get("/")
@@ -118,6 +118,7 @@ async def fetch_cmpid_from(
             cred_dct["USERNAME"],
             cred_dct["PASSWORD"],
         )
+        cxn.dsn()
         column_name = cxn.execute(col_query)  # ignore member-error
         if ENV != "PROD":
             print(col_query)

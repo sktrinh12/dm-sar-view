@@ -1,6 +1,6 @@
 sql_columns = {
     "mol_structure": "MOLFILE",
-    "biochemical_geomean": "ASSAY_TYPE, TARGET, VARIANT, COFACTORS, GEO_NM, N_OF_M, CREATED_DATE, DATE_HIGHLIGHT",
+    "biochemical_geomean": "ASSAY_TYPE, TARGET, VARIANT, COFACTORS, GEO_NM, N_OF_M, DATE_HIGHLIGHT",
     "cellular_geomean": "CELL, VARIANT, GEO_NM, ASSAY_TYPE, N_OF_M, DATE_HIGHLIGHT",
     "permeability": "A_B, B_A, EFFLUX_RATIO, CELL_TYPES, PCT_RECOVERY_AB, DATE_HIGHLIGHT",
     "protein_binding": "SPECIES, MATRIX, PCT_UNBOUND, DATE_HIGHLIGHT",
@@ -25,7 +25,7 @@ OFFSET 1 ROWS FETCH NEXT 1 ROWS ONLY
 
 sql_stmts = {
     "mol_structure": "SELECT {0} FROM C$PINPOINT.REG_DATA WHERE FORMATTED_ID = '{1}'",
-    "biochemical_geomean": None,
+    "biochemical_geomean": "select {0} from su_biochem_drc_stats where compound_id = '{1}' ORDER BY CREATED_DATE DESC",
     "cellular_geomean": """SELECT {0} FROM SU_CELLULAR_DRC_STATS WHERE COMPOUND_ID = '{1}' ORDER BY CREATED_DATE DESC""",
     "permeability": """SELECT {0} FROM FT_PERMEABILITY_VW WHERE COMPOUND_ID = '{1}' ORDER BY EXPERIMENT_DATE DESC""",
     "metabolic_stability": """SELECT {0} FROM FT_CYP_INHIBITION_VW WHERE COMPOUND_ID = '{1}' ORDER BY EXPERIMENT_DATE DESC""",
