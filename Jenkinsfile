@@ -23,7 +23,7 @@ pipeline {
         REDIS_PASSWD = credentials('REDIS_PASSWD')
         ENV = 'DEV'
         NAMESPACE = 'apps'
-        APP_NAME = 'sar-view'
+        APP_NAME = 'sar-view-dev'
         AWS_PAGER = ''
     }
 
