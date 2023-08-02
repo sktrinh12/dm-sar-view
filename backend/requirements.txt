@@ -6,3 +6,4 @@ rdkit
 redis
 requests
 celery
+psycopg2-binary
