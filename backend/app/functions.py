@@ -96,8 +96,8 @@ def execute_query_background_redis_celery(
             sql_stmt = case_date_highlight(
                 name, sql_stmt, case_txr, start_date, end_date
             )
-            print(sql_stmt)
-            print("-" * 50)
+            # print(sql_stmt)
+            # print("-" * 50)
             args_data["sql_stmt"] = sql_stmt
             args_data["name"] = name
             args_data["sql_column"] = sql_colm
