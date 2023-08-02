@@ -23,4 +23,4 @@ else:
             cred_dct[key] = value
     if ENV == "DEV":
         cred_dct["HOST"] = cred_dct["HOST-DEV"]
-    print(f'running in dev: {cred_dct["HOST"] }')
+    print(f'connected to db: {cred_dct["HOST"] }')
