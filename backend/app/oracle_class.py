@@ -3,6 +3,7 @@ from os import getenv
 from .rdkit import chem_draw
 from threading import Lock
 import psycopg2
+from decimal import Decimal
 
 
 oracle_dir = getenv(
@@ -90,6 +91,7 @@ class OracleCxn:
 
     def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
         split_colms = sql_column.split(",")
+        # skip the created_date as the second to last element
         date_idx = len(split_colms) - 1
         with self.queue_lock:
             response = []
@@ -100,8 +102,10 @@ class OracleCxn:
                     if name == "mol_structure":
                         value = chem_draw(value, 150)
                     elif name == "biochemical_geomean":
-                        if i == date_idx:
+                        if i == date_idx and not self.pg_db:
                             continue
+                        if self.pg_db and isinstance(value, Decimal):
+                            value = float(value)
                     row_values.append(value)
                 response.append(
                     dict(
@@ -110,6 +114,7 @@ class OracleCxn:
                     )
                 )
             # print(compound_id)
+            # print(response)
             payload[name] = response
             payload["compound_id"] = [{"FT_NUM": compound_id}]
 
