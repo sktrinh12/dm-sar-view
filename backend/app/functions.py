@@ -7,6 +7,7 @@ from .worker_count import workers
 from .credentials import cred_dct
 import concurrent.futures
 from .oracle_class import OracleCxn
+from copy import deepcopy
 
 expiry_time = 3600
 
@@ -79,19 +80,13 @@ def execute_query_background_redis_celery(
     group_tasks = []
     for cmp in compound_ids:
         sub_tasks = []
-        args_data = {"cmp": cmp}
-        if fast_type == -1:
-            args_data["pg_db"] = True
         for name, sql in sql_stmts.items():
             if name in negation:
                 continue
             sql_colm = sql_columns[name]
-            # if name == "biochemical_geomean":
-            #     column_names = sql_colm.split(", ")
-            #     filtered_column_names = [
-            #         column for column in column_names if column != "CREATED_DATE"
-            #     ]
-            #     sql_colm = ", ".join(filtered_column_names)
+            args_data = {"cmp": cmp}
+            if name == "biochemical_geomean":
+                args_data["pg_db"] = True
             sql_stmt = sql.format(sql_colm, cmp)
             sql_stmt = case_date_highlight(
                 name, sql_stmt, case_txr, start_date, end_date
@@ -101,7 +96,7 @@ def execute_query_background_redis_celery(
             args_data["sql_stmt"] = sql_stmt
             args_data["name"] = name
             args_data["sql_column"] = sql_colm
-            sub_tasks.append(exec_proc_outer.s(args_data))
+            sub_tasks.append(exec_proc_outer.s(deepcopy(args_data)))
         group_tasks.append(group(sub_tasks))
 
     results = [group_task.apply_async() for group_task in group_tasks]
@@ -163,12 +158,6 @@ def execute_query_background_redis_thread(
                 if name in negation:
                     continue
                 sql_colm = sql_columns[name]
-                # if name == "biochemical_geomean":
-                #     column_names = sql_colm.split(", ")
-                #     filtered_column_names = [
-                #         column for column in column_names if column != "CREATED_DATE"
-                #     ]
-                #     sql_colm = ", ".join(filtered_column_names)
                 sql_stmt = sql.format(sql_colm, cmp)
                 sql_stmt = case_date_highlight(
                     name, sql_stmt, case_txr, start_date, end_date
