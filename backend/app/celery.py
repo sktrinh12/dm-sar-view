@@ -18,6 +18,8 @@ def exec_proc_outer(args_data):
     name = args_data["name"]
     compound_id = args_data["cmp"]
     sql_column = args_data["sql_column"]
+    # print(sql_stmt)
+    # print("-" * 50)
     if "pg_db" in args_data:
         cxn = OracleCxn(
             getenv("PG_HOST"),
