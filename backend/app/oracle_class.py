@@ -91,19 +91,15 @@ class OracleCxn:
 
     def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
         split_colms = sql_column.split(",")
-        # skip the created_date as the second to last element
-        date_idx = len(split_colms) - 1
         with self.queue_lock:
             response = []
             payload = {}
             for row in rows:
                 row_values = []
-                for i, value in enumerate(row):
+                for value in row:
                     if name == "mol_structure":
                         value = chem_draw(value, 150)
                     elif name == "biochemical_geomean":
-                        if i == date_idx and not self.pg_db:
-                            continue
                         if self.pg_db and isinstance(value, Decimal):
                             value = float(value)
                     row_values.append(value)
@@ -118,8 +114,8 @@ class OracleCxn:
             payload[name] = response
             payload["compound_id"] = [{"FT_NUM": compound_id}]
 
-        if queue:
-            queue.put((compound_id, payload))
+            if queue:
+                queue.put((compound_id, payload))
         return compound_id, payload
 
     def execute_and_process(
