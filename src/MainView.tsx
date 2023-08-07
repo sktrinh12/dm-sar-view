@@ -203,7 +203,7 @@ const MainView: React.FC = () => {
         `updated data for ${requestId}, status: ${postResponse.status}`
       )
     } catch (err) {
-      console.error('AXIOS ERROR during POST request: ', err)
+      console.error('AXIOS ERROR during biochem update POST request: ', err)
     }
   }
 
