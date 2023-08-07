@@ -186,7 +186,7 @@ const MainView: React.FC = () => {
         setBioTimer(timer)
       }
     } catch (err) {
-      console.log('AXIOS ERROR: ', err)
+      console.log('AXIOS ERROR (fetchDataSlow) : ', err)
       setBioLoading(false)
     }
   }
@@ -203,7 +203,7 @@ const MainView: React.FC = () => {
         `updated data for ${requestId}, status: ${postResponse.status}`
       )
     } catch (err) {
-      console.error('AXIOS ERROR during POST request: ', err)
+      console.error('AXIOS ERROR during biochem update POST request: ', err)
     }
   }
 
