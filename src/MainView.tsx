@@ -186,7 +186,7 @@ const MainView: React.FC = () => {
         setBioTimer(timer)
       }
     } catch (err) {
-      console.log('AXIOS ERROR: ', err)
+      console.log('AXIOS ERROR (fetchDataSlow) : ', err)
       setBioLoading(false)
     }
   }
