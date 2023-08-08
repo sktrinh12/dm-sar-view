@@ -10,6 +10,8 @@ import GoHomeIcon from './GoHomeIcon'
 import Pagination from './Pagination'
 import { BACKEND_URL } from './BackendURL'
 import { compoundIdSort } from './sort'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 // import FetchContext, { FetchContextType } from './FetchedContext.tsx'
 
 const height = 667
@@ -32,13 +34,23 @@ const MainView: React.FC = () => {
 
   const [page, setPage] = useState<number>(1)
   const [user, setUser] = useState<string>('')
+  const [triggeredMultiples, setTriggeredMultiples] = useState<Set<number>>(
+    new Set()
+  )
 
   const handleNextPage = () => {
-    // const currPage = page + 1
-    setPage(page + 1)
+    const currPage = page + 1
+    setPage(currPage)
     // sessionStorage.setItem('page', currPage.toString())
-    if (page % compoundsPerPage === 0) {
+    // if (page % compoundsPerPage === 0) {
+    //   triggerNextBatch()
+    // }
+    if (
+      currPage % compoundsPerPage === 0 &&
+      !triggeredMultiples.has(currPage)
+    ) {
       triggerNextBatch()
+      setTriggeredMultiples(new Set(triggeredMultiples).add(currPage))
     }
   }
 
@@ -106,21 +118,25 @@ const MainView: React.FC = () => {
           setRequestIds(json.request_ids)
           console.log(json.request_ids)
           sessionStorage.setItem('requestIds', JSON.stringify(json.request_ids))
-          // sessionStorage.setItem('page', page.toString())
-          // sessionStorage.setItem(
-          // 'disablePagination',
-          // disablePagination.toString()
-          // )
-          // sessionStorage.setItem(
-          // 'compoundIds',
-          // JSON.stringify(compoundIdsArray)
-          // )
         }
         setTableData(json.data)
         setLoading(false)
       }
     } catch (err) {
       console.log('AXIOS ERROR: ', err)
+      toast.error(
+        'Failed to fetch data. Please wait a few more seconds and try again using the previous/next arrows within the app and not the browser',
+        {
+          position: 'top-center',
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: false,
+          progress: undefined,
+          theme: 'light',
+        }
+      )
       setLoading(false)
     }
   }
@@ -187,6 +203,16 @@ const MainView: React.FC = () => {
       }
     } catch (err) {
       console.log('AXIOS ERROR (fetchDataSlow) : ', err)
+      toast.error(`Failed to fetch data - ${err}`, {
+        position: 'top-center',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: false,
+        progress: undefined,
+        theme: 'light',
+      })
       setBioLoading(false)
     }
   }
@@ -348,6 +374,7 @@ const MainView: React.FC = () => {
           </Box>
         </>
       )}
+      <ToastContainer />
     </>
   )
 }
