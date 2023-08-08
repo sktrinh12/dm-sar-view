@@ -76,7 +76,9 @@ export default function TableGrid({
                               padding: '4px',
                             }}
                           >
-                            {columnKey !== 'row' && columnKey !== 'FT_NUM'
+                            {columnKey !== 'row' &&
+                            columnKey !== 'FT_NUM' &&
+                            columnKey !== 'MOLFILE'
                               ? columnKey
                                   .replace(/_/g, ' ')
                                   .toLowerCase()
