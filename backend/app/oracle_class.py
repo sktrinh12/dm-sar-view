@@ -2,7 +2,8 @@ import cx_Oracle
 from os import getenv
 from .rdkit import chem_draw
 from threading import Lock
-
+from datetime import datetime
+import re
 
 oracle_dir = getenv(
     "ORACLE_HOME", "/Users/spencer.trinhkinnate.com/instantclient_12_2/"
@@ -74,19 +75,19 @@ class OracleCxn:
             rows = cursor.fetchall()
             return rows
 
-    def _process_rows(self, rows, name, compound_id, sql_column, queue=None):
+    def _process_rows(self, rows, name, sql_column, queue=None):
         split_colms = sql_column.split(",")
-        date_idx = len(split_colms) - 1
         with self.queue_lock:
             response = []
             payload = {}
             for row in rows:
                 row_values = []
-                for i, value in enumerate(row):
+                for value in row:
                     if name == "mol_structure":
-                        value = chem_draw(value, 150)
+                        if not re.match(r"^[A-Z]{2}\d{6}$", value):
+                            value = chem_draw(value, 150)
                     elif name == "biochemical_geomean":
-                        if i == date_idx:
+                        if isinstance(value, datetime):
                             continue
                     row_values.append(value)
                 response.append(
@@ -95,19 +96,15 @@ class OracleCxn:
                         for key, value in zip(split_colms, row_values)
                     )
                 )
-            # print(compound_id)
             payload[name] = response
-            payload["compound_id"] = [{"FT_NUM": compound_id}]
 
         if queue:
-            queue.put((compound_id, payload))
-        return compound_id, payload
+            queue.put(payload)
+        return payload
 
-    def execute_and_process(
-        self, sql_stmt, name, compound_id, sql_column, queue, pool=False
-    ):
+    def execute_and_process(self, sql_stmt, name, sql_column, queue, pool=False):
         if pool:
             rows = self.pool_execute(sql_stmt)
         else:
             rows = self.execute(sql_stmt)
-        return self._process_rows(rows, name, compound_id, sql_column, queue)
+        return self._process_rows(rows, name, sql_column, queue)
