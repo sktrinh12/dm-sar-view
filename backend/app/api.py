@@ -196,11 +196,12 @@ async def sar_view_sql_set(
     request_id = f"{str(uuid.uuid4())}_page_1"
     request_ids.append(request_id)
     # print(f"first batch: { compound_ids[:pages]}")
+    paged_cmpids = compound_ids[:pages]
     if fast_type == 0:
         data = execute_query_background_redis_thread(
             q,
             request_id,
-            compound_ids[:pages],
+            paged_cmpids,
             start_date,
             end_date,
             fast_type,
@@ -208,7 +209,7 @@ async def sar_view_sql_set(
     else:
         data = execute_query_background_redis_celery(
             request_id,
-            compound_ids[:pages],
+            paged_cmpids,
             start_date,
             end_date,
             fast_type,
@@ -221,7 +222,6 @@ async def sar_view_sql_set(
             },
             media_type="application/json",
         )
-    # results = redis_conn.get(request_id)
     if nbr_cmpds > pages and fast_type != -1:
         remaining_batches[f"{user}_batch"] = []
         num_batches = ceil((nbr_cmpds - pages) / pages)
@@ -305,7 +305,7 @@ async def get_batches():
     return JSONResponse(content=remaining_batches)
 
 
-# cancel batches of 100 for specified user
+# cancel batches for specified user
 # must have the session id and user
 @app.post("/v1/cancel_batches")
 async def cancel_batches(user: str):
