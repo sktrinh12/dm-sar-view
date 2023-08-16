@@ -168,13 +168,22 @@ const MainView: React.FC = () => {
         setTableData((prevTableData) => {
           const updatedData = { ...prevTableData }
 
-          Object.entries(newData.data).forEach(([cmpdId, data]) => {
-            // console.log(data.biochemical_geomean)
-
-            if (updatedData[cmpdId]) {
-              updatedData[cmpdId].biochemical_geomean = data.biochemical_geomean
+          Object.entries(newData.data).forEach(([compoundId, compoundData]) => {
+            if (updatedData[compoundId]) {
+              updatedData[compoundId].biochemical_geomean =
+                compoundData.biochemical_geomean.map((item) => ({
+                  assay_type: item.ASSAY_TYPE,
+                  target: item.TARGET,
+                  variant: item.VARIANT,
+                  cofactors: item.COFACTORS,
+                  geo_nm: item.GEO_NM,
+                  n_of_m: item.N_OF_M,
+                  date_highlight: item.DATE_HIGHLIGHT,
+                }))
             }
           })
+
+          // console.log(updatedData)
 
           const storedRequestIds = JSON.parse(
             sessionStorage.getItem('requestIds')
@@ -186,7 +195,7 @@ const MainView: React.FC = () => {
 
           console.log(`firstRequestId: ${firstRequestId}`)
 
-          // console.log(updatedData)
+          console.log(updatedData)
           updateBioData(firstRequestId, updatedData)
 
           return updatedData
