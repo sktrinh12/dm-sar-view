@@ -68,55 +68,50 @@ def execute_query_background_redis_celery(
     else:
         negation = [-9]
 
-    group_tasks = []
-    for cmp in compound_ids:
-        sub_tasks = []
-        for name, sql in sql_stmts.items():
-            if name in negation:
-                continue
-            sql_colm = sql_columns[name]
-            if name == "biochemical_geomean":
-                column_names = sql_colm.split(", ")
-                filtered_column_names = [
-                    column for column in column_names if column != "CREATED_DATE"
-                ]
-                sql_colm = ", ".join(filtered_column_names)
-            sql_stmt = sql.format(sql_colm, cmp)
-            sql_stmt = case_date_highlight(
-                name, sql_stmt, case_txr, start_date, end_date
+    cmp_ids_in_clause = ", ".join(["'{}'".format(cmp) for cmp in compound_ids])
+    cmp_ids_parentheses = "(" + cmp_ids_in_clause + ")"
+    # print(cmp_ids_in_clause)
+    sub_tasks = []
+    for name, sql in sql_stmts.items():
+        if name in negation:
+            continue
+        sql_colm = sql_columns[name]
+        sql_stmt = sql.replace("'{1}'", "{1}").format(sql_colm, cmp_ids_parentheses)
+        if name == "mol_structure":
+            sql_stmt = sql_stmt.replace(
+                "WHERE FORMATTED_ID = ", "WHERE FORMATTED_ID IN "
             )
-            # print(sql_stmt)
-            args_data = {
-                "sql_stmt": sql_stmt,
-                "name": name,
-                "cmp": cmp,
-                "sql_column": sql_colm,
-            }
-            sub_tasks.append(exec_proc_outer.s(args_data))
-        group_tasks.append(group(sub_tasks))
+            sql_colm = sql_colm.replace("FORMATTED_ID", "COMPOUND_ID")
+        else:
+            sql_stmt = sql_stmt.replace("WHERE COMPOUND_ID = ", "WHERE COMPOUND_ID IN ")
+        if name == "biochemical_geomean":
+            select_index = sql_stmt.find("SELECT")
+            if select_index != -1:
+                sql_stmt = (
+                    sql_stmt[:select_index]
+                    + "SELECT max(t0.compound_id) as compound_id, "
+                    + sql_stmt[select_index + len("SELECT") :]
+                )
+            sql_stmt = sql_stmt.replace(
+                "WHERE t0.compound_id = ", "WHERE t0.compound_id IN "
+            )
+        sql_stmt = case_date_highlight(name, sql_stmt, case_txr, start_date, end_date)
+        # print(sql_stmt)
+        args_data = {
+            "sql_stmt": sql_stmt,
+            "name": name,
+            "sql_column": sql_colm,
+        }
+        sub_tasks.append(exec_proc_outer.s(args_data))
 
-    results = [group_task.apply_async() for group_task in group_tasks]
-    main_payload = {}
-    for result in results:
-        group_result = result.get()
-        for sub_result in group_result:
-            compound_id, payload = sub_result
-            if compound_id not in main_payload:
-                main_payload[compound_id] = {}
-            for key, value in payload.items():
-                main_payload[compound_id][key] = value
+    results = group(*sub_tasks).apply_async().get()
 
-    sorted_payload = {}
-    for n, cmpd_id in enumerate(main_payload, 1):
-        payload = {"row": [{"row": n}]}
-        for key in ["compound_id"] + list(sql_columns.keys()):
-            payload[key] = main_payload[cmpd_id].get(key, [])
-        sorted_payload[cmpd_id] = payload
+    results = restructure_data(results)
 
     if fast_type != -1:
-        redis_conn.set(request_id, dumps(sorted_payload))
+        redis_conn.set(request_id, dumps(results))
         redis_conn.expire(request_id, expiry_time)
-    return sorted_payload
+    return results
 
 
 def execute_query_background_redis_thread(
@@ -146,53 +141,100 @@ def execute_query_background_redis_thread(
     )
     orcl.pool_connect()
 
+    cmp_ids_in_clause = ", ".join(["'{}'".format(cmp) for cmp in compound_ids])
+    cmp_ids_parentheses = "(" + cmp_ids_in_clause + ")"
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        for cmp in compound_ids:
-            # print("-" * 50)
-            for name, sql in sql_stmts.items():
-                if name in negation:
-                    continue
-                sql_colm = sql_columns[name]
-                if name == "biochemical_geomean":
-                    column_names = sql_colm.split(", ")
-                    filtered_column_names = [
-                        column for column in column_names if column != "CREATED_DATE"
-                    ]
-                    sql_colm = ", ".join(filtered_column_names)
-                sql_stmt = sql.format(sql_colm, cmp)
-                sql_stmt = case_date_highlight(
-                    name, sql_stmt, case_txr, start_date, end_date
+        for name, sql in sql_stmts.items():
+            if name in negation:
+                continue
+            sql_colm = sql_columns[name]
+            sql_stmt = sql.replace("'{1}'", "{1}").format(sql_colm, cmp_ids_parentheses)
+            if name == "mol_structure":
+                sql_stmt = sql_stmt.replace(
+                    "WHERE FORMATTED_ID = ", "WHERE FORMATTED_ID IN "
                 )
-                # print(sql_stmt)
-                future = executor.submit(
-                    orcl.execute_and_process,
-                    sql_stmt,
-                    name,
-                    cmp,
-                    sql_colm,
-                    queue,
-                    True,
+                sql_colm = sql_colm.replace("FORMATTED_ID", "COMPOUND_ID")
+            else:
+                sql_stmt = sql_stmt.replace(
+                    "WHERE COMPOUND_ID = ", "WHERE COMPOUND_ID IN "
                 )
-                futures.append(future)
+            if name == "biochemical_geomean":
+                select_index = sql_stmt.find("SELECT")
+                if select_index != -1:
+                    sql_stmt = (
+                        sql_stmt[:select_index]
+                        + "SELECT max(t0.compound_id) as compound_id, "
+                        + sql_stmt[select_index + len("SELECT") :]
+                    )
+            sql_stmt = sql_stmt.replace(
+                "WHERE t0.compound_id = ", "WHERE t0.compound_id IN "
+            )
+            sql_stmt = case_date_highlight(
+                name, sql_stmt, case_txr, start_date, end_date
+            )
+            # print(sql_stmt)
+            future = executor.submit(
+                orcl.execute_and_process,
+                sql_stmt,
+                name,
+                sql_colm,
+                queue,
+                True,
+            )
+            futures.append(future)
 
     concurrent.futures.wait(futures)
-    main_payload = {}
     orcl.pool_disconnect()
+    payload = []
 
     while not queue.empty():
-        cmpd_id, payload = queue.get()
-        if cmpd_id not in main_payload:
-            main_payload[cmpd_id] = {}
-        main_payload[cmpd_id].update(payload)
+        payload.append(queue.get())
 
-    sorted_payload = {}
-    for n, cmpd_id in enumerate(main_payload, 1):
-        payload = {"row": [{"row": n}]}
-        for key in ["compound_id"] + list(sql_columns.keys()):
-            payload[key] = main_payload[cmpd_id].get(key, [])
-        sorted_payload[cmpd_id] = payload
+    sorted_payload = []
+    for key in ["compound_id" if fast_type != -1 else "formatted_id"] + list(
+        sql_columns.keys()
+    ):
+        for i in range(len(payload)):
+            key_name = list(payload[i].keys())[0]
+            if key_name == key:
+                sorted_payload.append(payload[i])
+
+    sorted_payload = restructure_data(sorted_payload)
 
     if fast_type != -1:
         redis_conn.set(request_id, dumps(sorted_payload))
         redis_conn.expire(request_id, expiry_time)
     return sorted_payload
+
+
+def restructure_data(original_data):
+    restructured_data = {}
+    tmp_data_holder = {}
+    row_number = 1
+
+    for data_object in original_data:
+        for key, nested_objects in data_object.items():
+            for nested_object in nested_objects:
+                compound_id = nested_object["COMPOUND_ID"]
+                del nested_object["COMPOUND_ID"]
+
+                if compound_id not in tmp_data_holder:
+                    tmp_data_holder[compound_id] = {
+                        "row": [{"row": row_number}],
+                        "compound_id": [{"FT_NUM": compound_id}],
+                    }
+                    row_number += 1
+
+                if key not in tmp_data_holder[compound_id]:
+                    tmp_data_holder[compound_id][key] = []
+
+                tmp_data_holder[compound_id][key].append(nested_object)
+
+    for compound_id in tmp_data_holder:
+        restructured_data[compound_id] = {}
+        for key in ["row", "compound_id"] + list(sql_columns.keys()):
+            restructured_data[compound_id][key] = tmp_data_holder[compound_id].get(
+                key, []
+            )
+    return restructured_data
