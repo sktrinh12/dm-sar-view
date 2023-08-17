@@ -15,15 +15,15 @@ pipeline {
         AWSID = credentials('AWSID')
         DOCKER_PSW = credentials('DOCKER_PASSWORD')
         DOCKER_CONFIG = "${WORKSPACE}/docker.config"
-        ORACLE_HOST = 'dotoradb.fount'
+        ORACLE_HOST = 'dotoradb-2022-0530-dev.fount.fount'
         ORACLE_PORT = 1521
         ORACLE_SID = credentials('ORACLE_SID')
         ORACLE_USER = credentials('ORACLE_USER')
         ORACLE_PASS = credentials('ORACLE_PASS')
         REDIS_PASSWD = credentials('REDIS_PASSWD')
-        ENV = 'PROD'
+        ENV = 'DEV'
         NAMESPACE = 'apps'
-        APP_NAME = 'sar-view'
+        APP_NAME = 'sar-view-test'
         AWS_PAGER = ''
     }
 
@@ -61,7 +61,7 @@ pipeline {
                 --build-arg ORACLE_PASS=${ORACLE_PASS} \
                 --build-arg DB_TYPE=PROD \
                 --build-arg REDIS_PASSWD=${REDIS_PASSWD} \
-                --build-arg REDIS_HOST=redis-svc-master.redis \
+                --build-arg REDIS_HOST=redis-svc-dev-master.redis \
                 --build-arg BACKEND_URL=sql-ds.kinnate \
                 --build-arg VERSION_NUMBER=${VERSION_NUMBER} \
                 -t ${AWSID}.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-backend:latest \
@@ -100,7 +100,7 @@ pipeline {
                 --no-cache --network=host \
                 --build-arg REACT_APP_BACKEND_URL=http://${APP_NAME}-backend.kinnate \
                 --build-arg REACT_APP_VERSION=${VERSION_NUMBER} \
-                --build-arg REACT_APP_ENVIRONMENT=PROD \
+                --build-arg REACT_APP_ENVIRONMENT=TEST \
                 --memory="2g" --memory-swap="4g" \
                 -t $AWSID.dkr.ecr.us-west-2.amazonaws.com/${APP_NAME}-frontend \
                 -f Dockerfile.prod .
