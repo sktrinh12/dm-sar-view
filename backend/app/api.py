@@ -29,7 +29,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",
     "http://localhost",
-    "http://sar-view.kinnate",
+    "http://sar-view-test.kinnate",
 ]
 
 app.add_middleware(
