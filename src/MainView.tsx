@@ -41,12 +41,8 @@ const MainView: React.FC = () => {
   const handleNextPage = () => {
     const currPage = page + 1
     setPage(currPage)
-    // sessionStorage.setItem('page', currPage.toString())
-    // if (page % compoundsPerPage === 0) {
-    //   triggerNextBatch()
-    // }
     if (
-      currPage % compoundsPerPage === 0 &&
+      (currPage % compoundsPerPage) - 9 === 0 &&
       !triggeredMultiples.has(currPage)
     ) {
       triggerNextBatch()
