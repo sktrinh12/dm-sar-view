@@ -42,3 +42,5 @@ The biochemical geomean SQL statement is extracted from http://sql-ds.kinnate
 service and formatted properly for the SAR view. If changes were made to the SQL
 source on the Dotmatics side, use this endpoint to update the SQL:
 `http://sar-view-backend.kinnate/v1/update_sql_ds`. Restarting the pods will alsoachieve the same result since it will retrieve the SQL on start-up. **Test the sql-datasource service after making changes to the SQL on the DM side**
+An example payload would be:
+`{"biochemical": {"id": 912,"app_type": "geomean_sar"}}`
