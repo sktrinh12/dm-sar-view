@@ -203,7 +203,7 @@ const MainView: React.FC = () => {
         }
         const timer = setTimeout(() => {
           setDisablePagination(false)
-        }, 8200)
+        }, 2100)
         setBioTimer(timer)
       }
     } catch (err) {
