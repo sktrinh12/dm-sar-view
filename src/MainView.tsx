@@ -25,7 +25,7 @@ const axiosConfig = {
 }
 
 const MainView: React.FC = () => {
-  const compoundsPerPage = 12
+  const compoundsPerPage = 20
   const [tableData, setTableData] = useState<TableDataType>({
     cellular_geomean: [],
     compound_batch: [],
