@@ -9,12 +9,13 @@ from datetime import datetime, timedelta
 from json import loads, dumps
 from .functions import (
     execute_query_background_redis_celery,
-    execute_query_background_redis_thread,
+    # execute_query_background_redis_thread,
 )
 from .redis_connection import redis_conn
 from .sql import dm_table_cols, sql_stmts
 from .globals import remaining_batches
-import queue
+
+# import queue
 import threading
 from .background_task import purge_expired_keys
 from .datasource_sql import get_ds_sql
@@ -40,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-q = queue.Queue()
+# q = queue.Queue()
 background_purge = threading.Thread(target=purge_expired_keys, daemon=True)
 background_purge.start()
 
@@ -183,23 +184,23 @@ async def sar_view_sql_set(
     request_ids.append(request_id)
     # print(f"first batch: { compound_ids[:pages]}")
     paged_cmpids = compound_ids[:pages]
-    if fast_type == 0:
-        data = execute_query_background_redis_thread(
-            q,
-            request_id,
-            paged_cmpids,
-            start_date,
-            end_date,
-            fast_type,
-        )
-    else:
-        data = execute_query_background_redis_celery(
-            request_id,
-            paged_cmpids,
-            start_date,
-            end_date,
-            fast_type,
-        )
+    # if fast_type == 0:
+    #     data = execute_query_background_redis_thread(
+    #         q,
+    #         request_id,
+    #         paged_cmpids,
+    #         start_date,
+    #         end_date,
+    #         fast_type,
+    #     )
+    # else:
+    data = execute_query_background_redis_celery(
+        request_id,
+        paged_cmpids,
+        start_date,
+        end_date,
+        fast_type,
+    )
     if fast_type == -1:
         return JSONResponse(
             content={
@@ -215,7 +216,7 @@ async def sar_view_sql_set(
             start_idx = pages + i * pages
             end_idx = pages + (i + 1) * pages
             subset_compound_ids = compound_ids[start_idx:end_idx]
-            print(f"next batch running for ... {subset_compound_ids}")
+            # print(f"next batch running for ... {subset_compound_ids}")
             request_id = f"{str(uuid.uuid4())}_page_{i+2}"
             request_ids.append(request_id)
             if i < pages:
@@ -311,3 +312,4 @@ async def thread_alive():
     return JSONResponse(
         content={"is_alive": background_purge.is_alive()}, media_type="application/json"
     )
+
