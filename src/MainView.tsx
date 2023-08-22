@@ -12,7 +12,6 @@ import { BACKEND_URL } from './BackendURL'
 import { compoundIdSort } from './sort'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-// import FetchContext, { FetchContextType } from './FetchedContext.tsx'
 
 const height = 667
 const width = 375
@@ -41,8 +40,10 @@ const MainView: React.FC = () => {
   const handleNextPage = () => {
     const currPage = page + 1
     setPage(currPage)
+    const triggerPage = compoundsPerPage - 3
     if (
-      (currPage % compoundsPerPage) - 9 === 0 &&
+      currPage > 0 &&
+      currPage % triggerPage === 0 &&
       !triggeredMultiples.has(currPage)
     ) {
       triggerNextBatch()
