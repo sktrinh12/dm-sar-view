@@ -215,7 +215,7 @@ async def sar_view_sql_set(
             start_idx = pages + i * pages
             end_idx = pages + (i + 1) * pages
             subset_compound_ids = compound_ids[start_idx:end_idx]
-            # print(f"next batch running for ... {subset_compound_ids}")
+            print(f"next batch running for ... {subset_compound_ids}")
             request_id = f"{str(uuid.uuid4())}_page_{i+2}"
             request_ids.append(request_id)
             if i < pages:
@@ -237,7 +237,6 @@ async def sar_view_sql_set(
                         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     )
                 )
-    # data = loads(results.decode()) if results is not None else None
     return JSONResponse(
         content={
             "request_ids": request_ids,
