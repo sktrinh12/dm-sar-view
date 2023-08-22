@@ -108,9 +108,9 @@ def execute_query_background_redis_celery(
 
     results = restructure_data(results)
 
-    if fast_type != -1:
-        redis_conn.set(request_id, dumps(results))
-        redis_conn.expire(request_id, expiry_time)
+    redis_conn.set(request_id, dumps(results))
+    redis_conn.expire(request_id, expiry_time)
+    print(f"redis set: {request_id}")
     return results
 
 
@@ -202,9 +202,9 @@ def execute_query_background_redis_thread(
 
     sorted_payload = restructure_data(sorted_payload)
 
-    if fast_type != -1:
-        redis_conn.set(request_id, dumps(sorted_payload))
-        redis_conn.expire(request_id, expiry_time)
+    redis_conn.set(request_id, dumps(sorted_payload))
+    redis_conn.expire(request_id, expiry_time)
+    print(f"redis set: {request_id}")
     return sorted_payload
 
 
