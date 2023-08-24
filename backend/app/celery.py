@@ -25,5 +25,5 @@ def exec_proc_outer(args_data):
         cred_dct["USERNAME"],
         cred_dct["PASSWORD"],
     )
-    payload = cxn.execute_and_process(sql_stmt, name, sql_column, None, False)
+    payload = cxn.execute_and_process(sql_stmt, name, sql_column, False)
     return payload
