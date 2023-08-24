@@ -7,15 +7,11 @@ from math import ceil
 import uuid
 from datetime import datetime, timedelta
 from json import loads, dumps
-from .functions import (
-    execute_query_background_redis_celery,
-    # execute_query_background_redis_thread,
-)
+from .functions import execute_query_background_redis_celery, expiry_time
 from .redis_connection import redis_conn
 from .sql import dm_table_cols, sql_stmts
 from .globals import remaining_batches
 
-# import queue
 import threading
 from .background_task import purge_expired_keys
 from .datasource_sql import get_ds_sql
@@ -41,7 +37,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# q = queue.Queue()
 background_purge = threading.Thread(target=purge_expired_keys, daemon=True)
 background_purge.start()
 
@@ -52,21 +47,6 @@ async def home():
         content=f'VERSION_NUMBER: {getenv("VERSION_NUMBER", 0.1)}',
         media_type="application/json",
     )
-
-
-# update sql statements dict
-@app.get("/v1/update_sql_ds")
-async def update_sql():
-    dct_names = {
-        "biochemical_geomean": {"ds_alias": "biochemical", "id": 912},
-    }
-    for key, dct in dct_names.items():
-        payload = {dct["ds_alias"]: {"id": dct["id"], "app_type": "geomean_sar"}}
-        sql = get_ds_sql(payload)
-        sql_query = sql["0"]["formatted_query"]
-        dct_names[key]["sql_query"] = sql_query
-        sql_stmts[list(dct_names.keys())[0]] = sql_query
-    return dct_names
 
 
 # retrieve all request ids from redis
@@ -143,6 +123,7 @@ async def sar_view_sql_update_biochem(
         )
     # print(updated_data)
     result = redis_conn.set(request_id, dumps(updated_data["updatedData"]))
+    redis_conn.expire(request_id, expiry_time)
     return JSONResponse(
         content={"request_id": request_id, "status": result},
         media_type="application/json",
@@ -184,16 +165,6 @@ async def sar_view_sql_set(
     request_ids.append(request_id)
     # print(f"first batch: { compound_ids[:pages]}")
     paged_cmpids = compound_ids[:pages]
-    # if fast_type == 0:
-    #     data = execute_query_background_redis_thread(
-    #         q,
-    #         request_id,
-    #         paged_cmpids,
-    #         start_date,
-    #         end_date,
-    #         fast_type,
-    #     )
-    # else:
     data = execute_query_background_redis_celery(
         request_id,
         paged_cmpids,
@@ -312,4 +283,3 @@ async def thread_alive():
     return JSONResponse(
         content={"is_alive": background_purge.is_alive()}, media_type="application/json"
     )
-
