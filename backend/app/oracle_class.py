@@ -75,7 +75,7 @@ class OracleCxn:
             rows = cursor.fetchall()
             return rows
 
-    def _process_rows(self, rows, name, sql_column, queue=None):
+    def _process_rows(self, rows, name, sql_column):
         split_colms = sql_column.split(",")
         with self.queue_lock:
             response = []
@@ -98,13 +98,11 @@ class OracleCxn:
                 )
             payload[name] = response
 
-        if queue:
-            queue.put(payload)
         return payload
 
-    def execute_and_process(self, sql_stmt, name, sql_column, queue, pool=False):
+    def execute_and_process(self, sql_stmt, name, sql_column, pool=False):
         if pool:
             rows = self.pool_execute(sql_stmt)
         else:
             rows = self.execute(sql_stmt)
-        return self._process_rows(rows, name, sql_column, queue)
+        return self._process_rows(rows, name, sql_column)
